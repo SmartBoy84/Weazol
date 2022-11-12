@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug jailbreakd",
+            "program": "${workspaceFolder:jailbreakd}/.build/debug/jailbreakd",
+            "args": [],
+            "cwd": "${workspaceFolder:jailbreakd}",
+            "preLaunchTask": "swift: Build Debug jailbreakd"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release jailbreakd",
+            "program": "${workspaceFolder:jailbreakd}/.build/release/jailbreakd",
+            "args": [],
+            "cwd": "${workspaceFolder:jailbreakd}",
+            "preLaunchTask": "swift: Build Release jailbreakd"
+        }
+    ]
+}
