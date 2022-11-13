@@ -73,6 +73,12 @@ int trust_bin(char **path, int path_n)
         cdhash *c;
         int ret_count = find_cdhash(path[i], sb.st_size, &c);
 
+        if (ret_count == 0)
+        {
+            printf("cdhash for %s not found", path[i]);
+            continue;
+        }
+
         cdhash_master[i].count = ret_count;
         cdhash_master[i].hash = c;
 
