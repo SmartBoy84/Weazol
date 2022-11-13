@@ -6,7 +6,7 @@
 
 #define TIMEOUT 100 // ms
 
-void init_me();
+int init_me();
 
 // add a binary to trustcache!
 int trust_bin(char **path, int path_n);

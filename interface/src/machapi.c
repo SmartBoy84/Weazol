@@ -36,7 +36,7 @@ mach_msg_return_t receive_ool(OOLReceiveMessage *rcvMessage, mach_msg_timeout_t 
 
 kern_return_t ret;
 
-void init_mach()
+int init_mach()
 {
     if (receive_port == 0)
     {
@@ -46,7 +46,7 @@ void init_mach()
             (ret = mach_port_insert_right(mach_task_self(), receive_port, receive_port, MACH_MSG_TYPE_MAKE_SEND) != KERN_SUCCESS))
         {
             printf("Port allocation failed: %s", mach_error_string(ret));
-            exit(EXIT_FAILURE);
+            return 1;
         }
     }
 
@@ -68,6 +68,8 @@ void init_mach()
         message.descriptor.type = MACH_MSG_OOL_DESCRIPTOR; // since kernel does some processing, must indicate that this is an OOL complex message
         message.msgh_descriptor_count = 1;
     }
+
+    return 0;
 }
 
 void *mach_alloc(size_t count) // stock malloc doesn't work with DEALLOCATE (program freezes)

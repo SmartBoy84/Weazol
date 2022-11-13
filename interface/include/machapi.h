@@ -68,7 +68,7 @@ void mach_dealloc(void *buf, size_t size);
 mach_msg_return_t receive_ool(OOLReceiveMessage *rcvMessage, mach_msg_timeout_t timeout);
 mach_msg_return_t send_ool(mach_port_name_t port, void *addr, mach_msg_size_t size, int deallocate, mach_msg_id_t id);
 
-void init_mach();
+int init_mach();
 void destroy_exit(int error);
 
 #endif /* server_h */

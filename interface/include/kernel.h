@@ -11,11 +11,17 @@
 // strip pointer authentication codes (PAC) from signed pointers (arm64e)
 #define STRIP_PAC(ptr) (ptr | 0xFFFFFF8000000000)
 
-// safely elevate a process
-int safe_elevate(pid_t pid);
+// primitives
+uint32_t rk32(addr64_t kptr);
+uint64_t rk64(addr64_t kptr);
+int wk32(addr64_t kptr, uint32_t wbuf);
+int wk64(addr64_t kptr, uint64_t wbuf);
 
 // read a kernel pointer - strips PAC
 addr64_t read_pointer(addr64_t ptr_addr);
+
+// safely elevate a process
+int safe_elevate(pid_t pid);
 
 // find task address for a port
 addr64_t find_task_port(mach_port_name_t port);

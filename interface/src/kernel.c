@@ -1,6 +1,30 @@
 #include "include/kernel.h"
 #include "include/jbd.h"
 
+uint32_t rk32(addr64_t kptr)
+{
+    uint32_t buff = 0;
+    kread(kptr, &buff, sizeof(uint32_t));
+    return buff;
+}
+
+uint64_t rk64(addr64_t kptr)
+{
+    uint64_t buff = 0;
+    kread(kptr, &buff, sizeof(uint64_t));
+    return buff;
+}
+
+int wk32(addr64_t kptr, uint32_t wbuf)
+{
+    return kwrite(kptr, &wbuf, sizeof(uint32_t));
+}
+
+int wk64(addr64_t kptr, uint64_t wbuf)
+{
+    return kwrite(kptr, &wbuf, sizeof(uint64_t));
+}
+
 addr64_t read_pointer(addr64_t ptr_addr)
 {
     addr64_t ptr;
@@ -23,9 +47,7 @@ int safe_elevate(pid_t pid)
         return 1;
     }
 
-    uint32_t root = 0;
-
-    if (kwrite(ucred_s + __cr_svuid_offset, &root, sizeof(uint32_t)))
+    if (wk32(ucred_s + __cr_svuid_offset, 0))
     {
         printf("Ucred writing failed!");
         return 1;

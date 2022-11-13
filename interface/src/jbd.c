@@ -15,9 +15,10 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
     // waitpid(pid, NULL, 0);
 }
 
-void init_me()
+int init_me()
 {
-    init_mach();
+    if (init_mach())
+        return 1;
 
     if (server == 0)
     {
@@ -25,9 +26,12 @@ void init_me()
         {
             printf("Failed to get server port - HOW?! Hang on, I'll try to start it...");
             run(amfidebilitate_path, NULL, NULL, NULL);
+            return 1;
         }
         // destroy_exit(EXIT_FAILURE);
     }
+
+    return 0;
 }
 
 int trust_bin(char **path, int path_n)
@@ -53,8 +57,6 @@ int trust_bin(char **path, int path_n)
             continue;
         }
 
-        printf("Computing hash for %s", path[i]);
-
         cdhash *c;
         int ret_count = find_cdhash(path[i], sb.st_size, &c);
 
@@ -78,15 +80,14 @@ int trust_bin(char **path, int path_n)
         }
     }
 
-    printf("Count: %d\n", count);
-    for (int x = 0; x < size; x++)
-    {
-        for (int i = 0; i < sizeof(cdhash); i++)
-        {
-            printf("%d ", *((uint8_t *)(c + x) + i));
-        }
-        printf("\n");
-    }
+    // for (int x = 0; x < size; x++)
+    // {
+    //     for (int i = 0; i < sizeof(cdhash); i++)
+    //     {
+    //         printf("%d ", *((uint8_t *)(c + x) + i));
+    //     }
+    //     printf("\n");
+    // }
 
     int ret = 0;
 
@@ -105,7 +106,8 @@ int trust_bin(char **path, int path_n)
 
 KDetails *init_kdetails()
 {
-    init_me();
+    if (init_me())
+        return 0;
 
     // char *dummy = mach_alloc(sizeof(char)); // I refuse to use normal mach messages
     if ((ret = send_ool(server, NULL, 0, DEALLOCATE, GET_KDETAILS)) != KERN_SUCCESS)
@@ -123,14 +125,16 @@ KDetails *init_kdetails()
 
     if (status.message.header.msgh_id == OP_SUCCESS)
         return (KDetails *)status.message.descriptor.address;
+    else
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
     return 0;
 }
 
 int kread(uint64_t ptr, void *buff, uint64_t count)
 {
-    init_me();
+    if (init_me())
+        return 1;
 
     int message_s = sizeof(uint64_t) * 2;
     uint64_t *message = mach_alloc(message_s);
@@ -140,7 +144,7 @@ int kread(uint64_t ptr, void *buff, uint64_t count)
     if ((ret = send_ool(server, message, message_s, DEALLOCATE, KREAD)) != KERN_SUCCESS)
     {
         printf("Error: %s", mach_error_string(ret));
-        return 0;
+        return 1;
     }
     mach_dealloc(message, message_s);
 
@@ -148,7 +152,7 @@ int kread(uint64_t ptr, void *buff, uint64_t count)
     if ((ret = receive_ool(&status, TIMEOUT)) != KERN_SUCCESS)
     {
         printf("Error: %s", mach_error_string(ret));
-        return 0;
+        return 1;
     }
 
     if (status.message.header.msgh_id == OP_SUCCESS)
@@ -164,14 +168,16 @@ int kread(uint64_t ptr, void *buff, uint64_t count)
             return 1;
         }
     }
+    else
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
     return 1;
 }
 
 int kwrite(uint64_t ptr, void *rbuff, uint64_t count)
 {
-    init_me();
+    if (init_me())
+        return 1;
 
     int message_s = (sizeof(uint64_t) * 2) + (count * sizeof(uint8_t));
     uint64_t *message = mach_alloc(message_s);
@@ -184,23 +190,26 @@ int kwrite(uint64_t ptr, void *rbuff, uint64_t count)
     if ((ret = send_ool(server, message, message_s, DEALLOCATE, KWRITE)) != KERN_SUCCESS)
     {
         printf("Error: %s", mach_error_string(ret));
-        return 0;
+        return 1;
     }
 
     OOLReceiveMessage status = {0};
     if ((ret = receive_ool(&status, TIMEOUT)) != KERN_SUCCESS)
     {
         printf("Error: %s", mach_error_string(ret));
-        return 0;
+        return 1;
     }
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
+    if (status.message.header.msgh_id != OP_SUCCESS)
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
+
     return status.message.header.msgh_id;
 }
 
 uint64_t get_tc_base()
 {
-    init_me();
+    if (init_me())
+        return 0;
 
     // char *dummy = mach_alloc(sizeof(char)); // I refuse to use normal mach messages
     if ((ret = send_ool(server, NULL, 0, DEALLOCATE, GET_TC_BASE)) != KERN_SUCCESS)
@@ -227,7 +236,8 @@ uint64_t get_tc_base()
 
 uint64_t add_hashs(uint8_t *hashes, uint8_t count, int mem_handle)
 {
-    init_me();
+    if (init_me())
+        return 0;
 
     if (mem_handle != PERSIST_MEM && mem_handle != DEALLOCATE)
     {
@@ -250,14 +260,16 @@ uint64_t add_hashs(uint8_t *hashes, uint8_t count, int mem_handle)
 
     if (status.message.header.msgh_id == OP_SUCCESS)
         return *((uint64_t *)status.message.descriptor.address);
+    else
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
     return 0;
 }
 
 uint64_t create_empty(int count)
 {
-    init_me();
+    if (init_me())
+        return 0;
 
     printf("Creating %d empty cache", count);
     uint8_t *message = mach_alloc(sizeof(int));
@@ -278,16 +290,16 @@ uint64_t create_empty(int count)
 
     if (status.message.header.msgh_id == OP_SUCCESS)
         return *((uint64_t *)status.message.descriptor.address);
+    else
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
     return 0;
 }
 
 int sub_hash(uint8_t *hash, int mem_handle)
 {
-    init_me();
-
-    printf("Subbing in hash");
+    if (init_me())
+        return 1;
 
     if (mem_handle != PERSIST_MEM && mem_handle != DEALLOCATE)
     {
@@ -308,13 +320,16 @@ int sub_hash(uint8_t *hash, int mem_handle)
         return 1;
     }
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
+    if (status.message.header.msgh_id != OP_SUCCESS)
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
+
     return status.message.header.msgh_id;
 }
 
 uint64_t sign_pointer(uint64_t target_p, uint64_t current_p)
 {
-    init_me();
+    if (init_me())
+        return 0;
 
     size_t message_s = 2 * sizeof(uint64_t);
     uint64_t *message = mach_alloc(message_s);
@@ -336,7 +351,8 @@ uint64_t sign_pointer(uint64_t target_p, uint64_t current_p)
 
     if (status.message.header.msgh_id == OP_SUCCESS)
         return *((uint64_t *)status.message.descriptor.address);
+    else
+        printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
-    printf("daemon %s: %s", status.message.header.msgh_id == OP_SUCCESS ? "return" : "ERROR", (char *)status.message.descriptor.address);
     return 0;
 }
