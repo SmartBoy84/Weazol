@@ -65,7 +65,7 @@ void kwrite(OOLReceiveMessage *raw_msg)
         if (count > 0)
         {
             uint64_t kptr = *((uint64_t *)raw_msg->message.descriptor.address + 1); // *cough - don't judge, it's beautiful in it's own way
-            if (!kwrite_s(kptr, (uint64_t *)(raw_msg->message.descriptor.address + 2), count))
+            if (!kwrite_s(kptr, (uint64_t *)raw_msg->message.descriptor.address + 2, count))
             {
                 send_ool(raw_msg->message.header.msgh_remote_port, NULL, 0, DEALLOCATE, OP_SUCCESS);
                 goto success;

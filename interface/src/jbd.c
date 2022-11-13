@@ -58,14 +58,14 @@ int trust_bin(char **path, int path_n)
         struct stat sb = {0};
         if (stat(path[i], &sb) != 0)
         {
-            printf("Failed to open binary");
+            printf("Failed to open bin %s", path[i]);
             cdhash_master[i].count = 0;
             continue;
         }
 
         if (!S_ISREG(sb.st_mode))
         {
-            printf("Not a binary!");
+            printf("%s a binary!", path[i]);
             cdhash_master[i].count = 0;
             continue;
         }

@@ -29,6 +29,8 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 */
 #define __unslidVirtBase 0xFFFFFFF007004000
 
+#define TF_PLATFORM 0x00000400
+
 // proc struc
 #define __task_offset 0x10
 #define __pid_offset 0x68
@@ -43,6 +45,7 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 #define __thread_count_offset 0x80
 #define __itk_space_offset 0x330
 #define __bsd_info 0x3A0
+#define __task_flags 0x3F4
 
 // ipc_port - from Taurine
 #define __io_references_offset 0x04
