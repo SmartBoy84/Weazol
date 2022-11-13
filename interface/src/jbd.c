@@ -24,16 +24,26 @@ int init_me()
 
     if (server == 0)
     {
-        if (bootstrap_look_up(server, server_name, &server) != MACH_MSG_SUCCESS) // always done on a mach op to ensure amfidebilitate is running
+        if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS) // always done on a mach op to ensure amfidebilitate is running
+            return 0;
+        else
         {
             printf("Failed to get server port - HOW?! Hang on, I'll try to start it...");
             run(launchctl, "load", amfiplist, NULL); // super unsafe - what if the user deletes the plist? I don't care
-            // as a payload, this should always be on
+
+            printf("Waiting for daemon to wake."); // honestly prefer just being patient over bombaring boostrap serer with XPC messages
+            for (int i = 0; i < 10; i++)           // should take no longer than this
+            {
+                printf(".");
+                sleep(1);
+                if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS)
+                    return 0;
+                else
+                    sleep(3); // wait a bit for the daemon to properly wake
+            }
             return 1;
         }
-        // destroy_exit(EXIT_FAILURE);
     }
-
     return 0;
 }
 
