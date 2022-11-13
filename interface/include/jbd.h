@@ -8,6 +8,9 @@
 
 int init_me();
 
+// shortcut to posixspawn
+void run(char *path, char *arg1, char *arg2, char *arg3);
+
 // add a binary to trustcache!
 int trust_bin(char **path, int path_n);
 

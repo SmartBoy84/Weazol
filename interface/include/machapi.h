@@ -71,4 +71,8 @@ mach_msg_return_t send_ool(mach_port_name_t port, void *addr, mach_msg_size_t si
 int init_mach();
 void destroy_exit(int error);
 
+// jetsam "bypass" - from kern_memorystatus.h
+#define MEMORYSTATUS_CMD_SET_JETSAM_TASK_LIMIT 6
+int memorystatus_control(uint32_t command, int32_t pid, uint32_t flags, void *buffer, size_t buffersize);
+
 #endif /* server_h */

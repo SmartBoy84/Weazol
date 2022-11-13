@@ -66,6 +66,13 @@ int trust_bin(char **path, int path_n)
         count++;
         size += ret_count;
     }
+
+    if (count == 0)
+    {
+        printf("Failed to compute ANY hash!");
+        return 1;
+    }
+    
     printf("Found %d valid hashes, adding", count);
 
     cdhash *c = malloc(sizeof(cdhash) * size);
@@ -95,8 +102,6 @@ int trust_bin(char **path, int path_n)
         ret = sub_hash((uint8_t *)c, PERSIST_MEM);
     else if (size > 1)
         ret = add_hashs((uint8_t *)c, size, PERSIST_MEM) == 0;
-    else
-        printf("Failed to compute ANY hash!");
 
     if (ret == 1)
         printf("Failed to add hash!");

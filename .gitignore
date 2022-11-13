@@ -1,2 +1,6 @@
-amfidebilitate/.build/*
-Weazol/weazol*
+amfidebilitate/.build
+*/*.tc
+**/.vscode
+**/.build
+amfidebilitate/amfidebilitate
+interface/weazol*

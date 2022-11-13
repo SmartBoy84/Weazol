@@ -40,7 +40,6 @@ int init_mach()
 {
     if (receive_port == 0)
     {
-        printf("Getting me a port");
         if (
             (ret = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &receive_port)) != KERN_SUCCESS ||
             (ret = mach_port_insert_right(mach_task_self(), receive_port, receive_port, MACH_MSG_TYPE_MAKE_SEND) != KERN_SUCCESS))
@@ -52,7 +51,6 @@ int init_mach()
 
     if (message.msgh_descriptor_count == 0)
     {
-        printf("Init stock OOL message");
         message.header.msgh_bits = MACH_MSGH_BITS_SET(
             MACH_MSG_TYPE_COPY_SEND, // remote
             MACH_MSG_TYPE_MAKE_SEND, // local
