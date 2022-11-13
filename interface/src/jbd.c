@@ -14,9 +14,6 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
 {
     printf("Running %s", path);
 
-    if (trust_bin(&path, 1))
-        return;
-
     posix_spawnattr_t attr;
     const char *launch_arg[] = {path, arg1, arg2, arg3};
 
@@ -44,7 +41,9 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
         exit(status);
     }
 
-    entitle(pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes
+    if (server > 0)
+        entitle(pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes
+    
     kill(pid, SIGCONT);
 
     wait(&status);

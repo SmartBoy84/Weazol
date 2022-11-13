@@ -5,7 +5,7 @@ APP_FLAG:=
 
 DYLIB:=pspawn.dylib
 DYLIB_FOLDER:=payload
-DYLIB_FILE:=${DYLIB_FOLDER}/*.c -I${DYLIB_FOLDER} -L${DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
+DYLIB_FILE:=${DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -L${DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
 DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO
 
 INCLUDE:=

@@ -68,7 +68,6 @@ addr64_t find_task_port(mach_port_name_t port)
 {
     // from here: https://github.com/jakeajames/multi_path/blob/master/multi_path/jelbrek/kern_utils.m
 
-    printf("Finding task for port %x", port);
     KDetails *kdeets = init_kdetails();
     addr64_t curproc = kdeets->allproc;
 
@@ -158,58 +157,56 @@ pid_t find_pid(char *name)
 
 addr64_t find_proc_by_task(pid_t pid)
 {
-	// this method required task_for_pid entitlement
+    // this method required task_for_pid entitlement
 
-	mach_port_t task = 0;
+    mach_port_t task = 0;
 
-	kern_return_t kern_return = task_for_pid(mach_task_self(), pid, &task);
-	if (kern_return != KERN_SUCCESS)
-	{
-		printf("task_for_pid failed: %s\n", mach_error_string(kern_return));
-		return 0;
-	}
+    kern_return_t kern_return = task_for_pid(mach_task_self(), pid, &task);
+    if (kern_return != KERN_SUCCESS)
+    {
+        printf("task_for_pid failed: %s\n", mach_error_string(kern_return));
+        return 0;
+    }
 
-	addr64_t task_port_addr;
-	if (!(task_port_addr = find_task_port(task)))
-		return 0;
+    addr64_t task_port_addr;
+    if (!(task_port_addr = find_task_port(task)))
+        return 0;
 
-	addr64_t task_addr;
-	if (!(task_addr = read_pointer(task_port_addr + __ip_kobject_offset)))
-		return 0;
+    addr64_t task_addr;
+    if (!(task_addr = read_pointer(task_port_addr + __ip_kobject_offset)))
+        return 0;
 
-	addr64_t proc = read_pointer(task_addr + __bsd_info);
-	if (proc == 0)
-	{
-		printf("Failed to find proc for pid %d", pid);
-		return 0;
-	}
-	mach_port_deallocate(mach_task_self(), task);
-	return proc;
+    addr64_t proc = read_pointer(task_addr + __bsd_info);
+    if (proc == 0)
+    {
+        printf("Failed to find proc for pid %d", pid);
+        return 0;
+    }
+    mach_port_deallocate(mach_task_self(), task);
+    return proc;
 }
 
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
 {
-	uint64_t target_proc = 0;
-	if (!(target_proc = find_proc_by_task(pid)))
-	{
-		printf("Failed to find child proc");
-		return 0;
-	}
+    uint64_t target_proc = 0;
+    if (!(target_proc = find_proc_by_task(pid)))
+    {
+        printf("Failed to find child proc");
+        return 1;
+    }
 
-	printf("Granting entitlements...");
+    addr64_t our_task_addr = read_pointer(target_proc + __task_offset);
+    addr64_t task_flags_addr = our_task_addr + __task_flags;
+    addr64_t csflags_addr = target_proc + __cs_flags_offset;
 
-	addr64_t our_task_addr = read_pointer(target_proc + __task_offset);
-	addr64_t task_flags_addr = our_task_addr + __task_flags;
-	addr64_t csflags_addr = target_proc + __cs_flags_offset;
+    uint32_t flags = rk32(task_flags_addr);
+    flags |= target_cs_flags;
+    wk32(task_flags_addr, flags | target_task_flags);
 
-	uint32_t flags = rk32(task_flags_addr);
-	wk32(task_flags_addr, flags | target_task_flags);
+    uint32_t csflags = rk32(csflags_addr);
 
-	uint32_t csflags = rk32(csflags_addr);
-	printf("Old csflags: %x", csflags);
+    csflags |= target_cs_flags;
+    wk32(csflags_addr, csflags);
 
-	csflags = csflags | target_cs_flags;
-	wk32(csflags_addr, csflags);
-
-	printf("New csflags: %x", rk32(csflags_addr));
+    return 0;
 }

@@ -48,8 +48,14 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 #define __thread_offset 0x58
 #define __thread_count_offset 0x80
 #define __itk_space_offset 0x330
+#define __rop_pid_offset 0x360
+#define __job_pid_offset 0x368
 #define __bsd_info 0x3A0
 #define __task_flags 0x3F4
+
+// thread struct
+#define  __thread_rop_pid_offset 0x508
+#define  __thread_job_pid_offset 0x510
 
 // ipc_port - from Taurine
 #define __io_references_offset 0x04
