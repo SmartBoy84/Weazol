@@ -29,7 +29,11 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 */
 #define __unslidVirtBase 0xFFFFFFF007004000
 
+// flag constants - https://opensource.apple.com/source/xnu/xnu-4570.1.46/osfmk/kern/cs_blobs.h
 #define TF_PLATFORM 0x00000400
+#define CS_PLATFORM_BINARY 0x04000000
+#define CS_GET_TASK_ALLOW 0x00000004
+#define CS_DEBUGGED 0x10000000
 
 // proc struc
 #define __task_offset 0x10

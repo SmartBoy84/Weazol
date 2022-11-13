@@ -29,5 +29,11 @@ addr64_t find_task_port(mach_port_name_t port);
 // find proc struct of program with the pid in the linked list in kernel mem (1 limitation, check error)
 addr64_t find_proc(pid_t pid);
 
+// find proc by task - allows for finding child processes (pid > self_pid)
+addr64_t find_proc_by_task(pid_t pid);
+
 // find the pid of a program using its name
 pid_t find_pid(char *name);
+
+// add entitlements to process
+int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags);
