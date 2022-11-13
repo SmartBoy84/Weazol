@@ -4,7 +4,9 @@
 
 mach_port_t server = 0;
 #define server_name "com.fugu.amfi"
-#define amfidebilitate_path "/.Fugu14Untether/autorun/amfidebilitate"
+#define launchctl "/.Fugu14Untether/bin/launchctl"
+#define amfidebilitate "/.Fugu14Untether/amfi/amfidebilitate"
+#define amfiplist "/.Fugu14Untether/amfi/com.fugu.debilitate.plist"
 
 void run(char *path, char *arg1, char *arg2, char *arg3)
 {
@@ -25,7 +27,8 @@ int init_me()
         if (bootstrap_look_up(server, server_name, &server) != MACH_MSG_SUCCESS) // always done on a mach op to ensure amfidebilitate is running
         {
             printf("Failed to get server port - HOW?! Hang on, I'll try to start it...");
-            run(amfidebilitate_path, NULL, NULL, NULL);
+            run(launchctl, "load", amfiplist, NULL); // super unsafe - what if the user deletes the plist? I don't care
+            // as a payload, this should always be on
             return 1;
         }
         // destroy_exit(EXIT_FAILURE);
@@ -72,7 +75,7 @@ int trust_bin(char **path, int path_n)
         printf("Failed to compute ANY hash!");
         return 1;
     }
-    
+
     printf("Found %d valid hashes, adding", count);
 
     cdhash *c = malloc(sizeof(cdhash) * size);
