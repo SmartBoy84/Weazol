@@ -1,6 +1,8 @@
 #include "include/jbd.h"
 #include "include/cdhash.h"
+#include "include/kernel.h"
 #include <spawn.h>
+#include <signal.h>
 
 mach_port_t server = 0;
 #define server_name "com.fugu.amfi"
@@ -10,11 +12,43 @@ mach_port_t server = 0;
 
 void run(char *path, char *arg1, char *arg2, char *arg3)
 {
-    const char *launch_arg[] = {path, arg1, arg2, arg3};
-    pid_t pid;
+    printf("Running %s", path);
 
-    posix_spawn(&pid, path, NULL, NULL, (char **)&launch_arg, NULL);
-    // waitpid(pid, NULL, 0);
+    if (trust_bin(&path, 1))
+        return;
+
+    posix_spawnattr_t attr;
+    const char *launch_arg[] = {path, arg1, arg2, arg3};
+
+    pid_t pid;
+    int status;
+
+    status = posix_spawnattr_init(&attr);
+    if (status != 0)
+    {
+        perror("can't init spawnattr");
+        exit(status);
+    }
+
+    status = posix_spawnattr_setflags(&attr, POSIX_SPAWN_START_SUSPENDED);
+    if (status != 0)
+    {
+        perror("can't set flags");
+        exit(status);
+    }
+
+    status = posix_spawn(&pid, path, NULL, &attr, (char **)&launch_arg, NULL);
+    if (status != 0)
+    {
+        printf("posix_spawn: %s\n", strerror(status));
+        exit(status);
+    }
+
+    entitle(pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes
+    kill(pid, SIGCONT);
+
+    wait(&status);
+    printf("child exited with status %d\n", WEXITSTATUS(status));
 }
 
 int init_me()
