@@ -1,5 +1,6 @@
 * paylaod will need to do a couple of things: 
  - Apply several flags (read my code, entitle()) to processes 
+ - Set POSIX_SPAWN_SETEXEC flag on process or hook exec() as well
  - Apply various entitlements 
  - Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf) 
  - Set same rop/jop IDs (read OPAinject discord) 
