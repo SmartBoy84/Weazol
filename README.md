@@ -1,10 +1,12 @@
 * paylaod will need to do a couple of things: 
- Apply several flags (read my code, entitle()) to processes 
- Apply various entitlements 
- Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf) 
- Set same rop/jop IDs (read OPAinject discord) 
- Other things?!  
- Make sure to add function to verify whether the binary can be run
+ - Apply several flags (read my code, entitle()) to processes 
+ - Apply various entitlements 
+ - Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf) 
+ - Set same rop/jop IDs (read OPAinject discord) 
+ - Make sure to add function to verify whether the binary can be run
+ - Will also need to add INJECT_LIBRARY to cydia substrate dylib
+ - Set various other environment variables as well
+ - Other things?!  
 
 # Weazol
 Less of a cautious venture into iOS
