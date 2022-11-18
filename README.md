@@ -2,6 +2,7 @@
  - Apply several flags (read my code, entitle()) to processes 
  - Set POSIX_SPAWN_SETEXEC flag on process or hook exec() as well
  - Apply various entitlements 
+   - Trust level will be demoted through the addition of arbitrary entitlements
  - Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf) 
  - Set same rop/jop IDs (read OPAinject discord) 
  - Make sure to add function to verify whether the binary can be run
