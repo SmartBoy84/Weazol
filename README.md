@@ -3,7 +3,8 @@
  Apply various entitlements 
  Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf) 
  Set same rop/jop IDs (read OPAinject discord) 
- Other things?! 
+ Other things?!  
+ Make sure to add function to verify whether the binary can be run
 
 # Weazol
 Less of a cautious venture into iOS
