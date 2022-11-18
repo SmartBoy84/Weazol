@@ -1,3 +1,10 @@
+* paylaod will need to do a couple of things:
+ Apply several flags (read my code, entitle()) to processes
+ Apply various entitlements
+ Null sandbox pointer (read coolsar's slides https://cameronkatri.com/nullcongoa2022.pdf)
+ Set same rop/jop IDs (read OPAinject discord)
+ Other things?!
+
 # Weazol
 Less of a cautious venture into iOS
 
