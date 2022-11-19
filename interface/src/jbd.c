@@ -42,8 +42,11 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
     }
 
     if (server > 0)
-        entitle(pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes
-    
+    {
+        entitle(pid, 0, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes, ADD TF_PLATFORM (BROKEN RN) TO TASK FLAGS
+        pacify(getpid(), pid);                                                 // necessary for tweak injection - from the payload, this will set all process's PAC keys to be the same as launchd
+    }
+
     kill(pid, SIGCONT);
 
     wait(&status);

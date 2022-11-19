@@ -20,9 +20,6 @@ int wk64(addr64_t kptr, uint64_t wbuf);
 // read a kernel pointer - strips PAC
 addr64_t read_pointer(addr64_t ptr_addr);
 
-// safely elevate a process
-int safe_elevate(pid_t pid);
-
 // find task address for a port
 addr64_t find_task_port(mach_port_name_t port);
 
@@ -37,3 +34,6 @@ pid_t find_pid(char *name);
 
 // add entitlements to process
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags);
+
+// make the PAC keys of a target process the same as the source
+int pacify(pid_t source, pid_t target);

