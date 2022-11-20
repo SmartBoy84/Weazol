@@ -10,7 +10,7 @@ mach_port_t server = 0;
 #define amfidebilitate "/.Fugu14Untether/amfi/amfidebilitate"
 #define amfiplist "/.Fugu14Untether/amfi/com.fugu.debilitate.plist"
 
-void run(char *path, char *arg1, char *arg2, char *arg3)
+int run(char *path, char *arg1, char *arg2, char *arg3)
 {
     printf("Running %s", path);
 
@@ -24,21 +24,21 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
     if (status != 0)
     {
         perror("can't init spawnattr");
-        exit(status);
+        return status;
     }
 
     status = posix_spawnattr_setflags(&attr, POSIX_SPAWN_START_SUSPENDED);
     if (status != 0)
     {
         perror("can't set flags");
-        exit(status);
+        return status;
     }
 
     status = posix_spawn(&pid, path, NULL, &attr, (char **)&launch_arg, NULL);
     if (status != 0)
     {
         printf("posix_spawn: %s\n", strerror(status));
-        exit(status);
+        return status;
     }
 
     if (server > 0)
@@ -51,6 +51,8 @@ void run(char *path, char *arg1, char *arg2, char *arg3)
 
     wait(&status);
     printf("child exited with status %d\n", WEXITSTATUS(status));
+
+    return WEXITSTATUS(status);
 }
 
 int init_me()

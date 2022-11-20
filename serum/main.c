@@ -52,7 +52,11 @@ int main(const int argc, char **argv)
 
 	char str[24];
 	sprintf(str, "%d", getpid());
-	run(cynject, str, pspawn_payload, NULL);
+	if (run(cynject, str, pspawn_payload, NULL))
+	{
+		printf("Failed to inject!");
+		return 1;
+	}
 
 	for (;;)
 		test_hook();
