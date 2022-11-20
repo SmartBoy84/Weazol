@@ -74,10 +74,11 @@ int init_me()
             {
                 printf(".");
                 sleep(1);
-                if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS)
-                    return 0;
-                else
+                
+                if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS) {
                     sleep(3); // wait a bit for the daemon to properly wake
+                    return 0;
+                }
             }
             return 1;
         }
