@@ -1,15 +1,26 @@
+#ifndef JBD_H_
+#define JBD_H_
+
 #include "machapi.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include "mach/mach.h"
 #include "string.h"
+#include <spawn.h>
+#include <signal.h>
 
 #define TIMEOUT 100 // ms
+
+// complicated shizzle
+typedef int (*pspawn_t)(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp);
 
 int init_me();
 
 // shortcut to posixspawn
-int run(char *path, char *arg1, char *arg2, char *arg3);
+int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func);
+
+// my custom posix_spawn
+int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp, pspawn_t custom_func, int execution_end_wait);
 
 // add a binary to trustcache!
 int trust_bin(char **path, int path_n);
@@ -37,3 +48,5 @@ uint64_t create_empty(int count);
 
 // sign a pointer (pac bypass)
 uint64_t sign_pointer(uint64_t target_p, uint64_t current_p);
+
+#endif

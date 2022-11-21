@@ -31,9 +31,13 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 
 // flag constants - https://opensource.apple.com/source/xnu/xnu-4570.1.46/osfmk/kern/cs_blobs.h
 #define TF_PLATFORM 0x00000400
+
 #define CS_PLATFORM_BINARY 0x04000000
 #define CS_GET_TASK_ALLOW 0x00000004
 #define CS_DEBUGGED 0x10000000
+#define CS_HARD 0x00000100     /* don't load invalid pages */
+#define CS_KILL 0x00000200     /* kill process if it becomes invalid */
+#define CS_RESTRICT 0x00000800 /* tell dyld to treat restricted */
 
 // proc struc
 #define __task_offset 0x10
@@ -54,12 +58,12 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 #define __task_flags 0x3F4
 
 // thread struct
-#define  __thread_rop_pid_offset 0x508 // jop - 0x8
-#define  __thread_jop_pid_offset 0x510
+#define __thread_rop_pid_offset 0x508 // jop - 0x8
+#define __thread_jop_pid_offset 0x510
+// thread struct
+#define __thread_rop_pid_offset 0x508 // jop - 0x8
+#define __thread_jop_pid_offset 0x510
 
-// ipc_port - from Taurine
-#define __io_references_offset 0x04
-#define __ip_mscount_offset 0x9C
 #define __ip_receiver_offset 0x60
 #define __ip_srights_offset 0xa0
 #define __ip_kobject_offset 0x68 // this stores the address to the proc struct in the kernel

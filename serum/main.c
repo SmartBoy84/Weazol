@@ -10,21 +10,24 @@
 #include "include/tools.h"
 
 #define cynject "/binpack/opainject"
-#define pspawn_payload "/binpack/pspawn.dylib"
+#define pspawn_payload "/binpack/vamos.dylib"
 
 void test_hook()
 {
-	run("/bin/echo", "NOT HOOKED", NULL, NULL);
+	run("/bin/ls", NULL, NULL, NULL, NULL);
 	sleep(1);
 }
 
-int main(const int argc, char **argv)
+int main(const int argc, char **argv, char **envp)
 {
+	for (char **env = envp; *env != 0; env++)
+	{
+		char *thisEnv = *env;
+		printf("%s\n", thisEnv);
+	}
+
 	if (getuid() > 0 && safe_elevate(getpid()))
 		return 1;
-
-	// pacify(1, getpid());
-	// return 1;
 
 	if (entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED))
 	{
@@ -48,19 +51,22 @@ int main(const int argc, char **argv)
 		return 0;
 	}
 
-	printf("Interposing %s to pid %d", pspawn_payload, getpid());
-
 	char str[24];
-	sprintf(str, "%d", getpid());
-	if (run(cynject, str, pspawn_payload, NULL))
+	// sprintf(str, "%d", getpid());
+	sprintf(str, "%d", 1); // inject into launchd
+
+	printf("Interposing %s to pid %s", pspawn_payload, str);
+
+	if (run(cynject, str, pspawn_payload, NULL, NULL))
 	{
 		printf("Failed to inject!");
 		return 1;
 	}
 
+	// run("bigpsp", NULL, NULL, NULL, NULL);
+
 	for (;;)
 		test_hook();
 
-	// run("/bin/echo", "HELLO WORLD!", NULL, NULL);
 	return 0;
 }

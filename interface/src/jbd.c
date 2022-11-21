@@ -1,57 +1,105 @@
 #include "include/jbd.h"
 #include "include/cdhash.h"
 #include "include/kernel.h"
-#include <spawn.h>
-#include <signal.h>
 
 mach_port_t server = 0;
+
 #define server_name "com.fugu.amfi"
 #define launchctl "/.Fugu14Untether/bin/launchctl"
 #define amfidebilitate "/.Fugu14Untether/amfi/amfidebilitate"
 #define amfiplist "/.Fugu14Untether/amfi/com.fugu.debilitate.plist"
 
-int run(char *path, char *arg1, char *arg2, char *arg3)
+#define PAYLOAD "/binpack/vamos.dylib"
+
+// for the noobs
+int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func) // mostly acts as a shim for past code
 {
-    printf("Running %s", path);
+    char const *launch_arg[] = {path, arg1, arg2, arg3};
+    return posix_custom(NULL, path, NULL, NULL, (char **)&launch_arg, NULL, custom_func, 1);
+}
 
-    posix_spawnattr_t attr;
-    const char *launch_arg[] = {path, arg1, arg2, arg3};
+int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp, pspawn_t custom_func, int execution_end_wait)
+{
+    // big man
+    int envcount = 0;
+    int dyld_i = 0;
 
-    pid_t pid;
-    int status;
-
-    status = posix_spawnattr_init(&attr);
-    if (status != 0)
+    if (envp != NULL)
     {
-        perror("can't init spawnattr");
-        return status;
+        const char **currentenv = envp;
+        int dyld_finder = 0;
+
+        for (int i = 0; *currentenv != NULL; i++)
+        {
+            if (strstr(*currentenv, "DYLD_INSERT_LIBRARIES") == NULL)
+                envcount++;
+            else
+                dyld_i = i; // store where this is defined
+
+            currentenv++;
+        }
     }
 
-    status = posix_spawnattr_setflags(&attr, POSIX_SPAWN_START_SUSPENDED);
+    char **newenvp = malloc((envcount + 2) * sizeof(char **)); // +2 - store DYLD_INSERT_LIBRARIES + NULL
+    int j = 0;                                                 // newenvp counter
+    for (int i = 0; i < envcount; i++)
+    {
+        if (strstr(envp[i], "DYLD_INSERT_LIBRARIES"))
+            continue;
+
+        newenvp[j++] = envp[i];
+    }
+
+    char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PAYLOAD) + 1);
+    injection[0] = '\0';
+    strcat(injection, "DYLD_INSERT_LIBRARIES=");
+    strcat(injection, PAYLOAD);
+
+    newenvp[j] = injection;
+    newenvp[++j] = NULL;
+
+    int status;
+
+    if (attrp == NULL)
+    {
+        attrp = malloc(sizeof(posix_spawnattr_t));
+        status = posix_spawnattr_init(attrp);
+        if (status != 0)
+        {
+            perror("can't init spawnattr");
+            return status;
+        }
+    }
+
+    if (pid == NULL)
+        pid = malloc(sizeof(int));
+
+    status = posix_spawnattr_setflags(attrp, POSIX_SPAWN_START_SUSPENDED);
     if (status != 0)
     {
         perror("can't set flags");
         return status;
     }
 
-    status = posix_spawn(&pid, path, NULL, &attr, (char **)&launch_arg, NULL);
+    status = custom_func != NULL ? custom_func(pid, path, file_actions, attrp, argv, newenvp) : posix_spawn(pid, path, file_actions, attrp, argv, newenvp);
     if (status != 0)
     {
-        printf("posix_spawn: %s\n", strerror(status));
+        printf("posix_spawn [ERROR]: %s %d\n", strerror(status), status);
         return status;
     }
 
     if (server > 0)
     {
-        entitle(pid, 0, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes, ADD TF_PLATFORM (BROKEN RN) TO TASK FLAGS
-        pacify(getpid(), pid);                                                 // necessary for tweak injection - from the payload, this will set all process's PAC keys to be the same as launchd
+        entitle(*pid, 0, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes, ADD TF_PLATFORM (BROKEN RN) TO TASK FLAGS
+        // pacify(1, *pid);                                                        // BROKEN, not necessary - necessary for tweak injection - from the payload, this will set all process's PAC keys to be the same as launchd
     }
 
-    kill(pid, SIGCONT);
+    kill(*pid, SIGCONT);
 
-    wait(&status);
+    if (execution_end_wait)
+        wait(&status);
+
     printf("child exited with status %d\n", WEXITSTATUS(status));
-
     return WEXITSTATUS(status);
 }
 
@@ -67,15 +115,16 @@ int init_me()
         else
         {
             printf("Failed to get server port - HOW?! Hang on, I'll try to start it...");
-            run(launchctl, "load", amfiplist, NULL); // super unsafe - what if the user deletes the plist? I don't care
+            run(launchctl, "load", amfiplist, NULL, NULL); // super unsafe - what if the user deletes the plist? I don't care
 
             printf("Waiting for daemon to wake."); // honestly prefer just being patient over bombaring boostrap serer with XPC messages
             for (int i = 0; i < 10; i++)           // should take no longer than this
             {
                 printf(".");
                 sleep(1);
-                
-                if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS) {
+
+                if (bootstrap_look_up(server, server_name, &server) == MACH_MSG_SUCCESS)
+                {
                     sleep(3); // wait a bit for the daemon to properly wake
                     return 0;
                 }
@@ -104,7 +153,7 @@ int trust_bin(char **path, int path_n)
 
         if (!S_ISREG(sb.st_mode))
         {
-            printf("%s a binary!", path[i]);
+            printf("%s isn't a binary!", path[i]);
             cdhash_master[i].count = 0;
             continue;
         }
@@ -123,6 +172,8 @@ int trust_bin(char **path, int path_n)
 
         count++;
         size += ret_count;
+
+        printf("Adding %s\n", path[i]);
     }
 
     if (count == 0)

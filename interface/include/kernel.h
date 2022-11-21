@@ -1,3 +1,6 @@
+#ifndef KERNEL_H_
+#define KERNEL_H_
+
 #include "jbd.h"
 #include "headers/offsets.h"
 #include "headers/shenanigans.h"
@@ -36,4 +39,6 @@ pid_t find_pid(char *name);
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags);
 
 // make the PAC keys of a target process the same as the source
-int pacify(pid_t source, pid_t target);
+void pacify(pid_t source, pid_t target);
+
+#endif

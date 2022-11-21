@@ -1,9 +1,9 @@
-APP:=pspawn
+APP:=pspboi
 APP_FILE:=main.c src/*.c -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
 ENT:=ent.plist
 APP_FLAG:=
 
-DYLIB:=pspawn.dylib
+DYLIB:=vamos.dylib
 DYLIB_FOLDER:=payload
 DYLIB_FILE:=${DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -L${DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
 DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO
@@ -33,7 +33,7 @@ RERUN=$(MAKE) --no-print-directory
 FLAGS=$(INCLUDE) $(ARCH) $(CUSTOM)
 
 all: build sign
-do: build sign upload run
+do: build sign upload
 
 build:
 	@echo "$(arrow)$(green)Compiling ${APP_FILE} to ${APP} and ${DYLIB_FILE} to ${DYLIB}$(end)"
@@ -48,7 +48,7 @@ sign:
 
 upload:
 	@echo "$(arrow)$(green)Uploading ${APP}$(end)"
-	-@ssh -p $(PORT) $(ADDR) "rm $(UPLOAD_DIR)/$(APP)"
+	-@ssh -p $(PORT) $(ADDR) "rm $(UPLOAD_DIR)/$(APP) $(UPLOAD_DIR)/$(DYLIB)"
 	@scp -P $(PORT) ${APP} $(DYLIB) ${ADDR}:${UPLOAD_DIR}
 
 run:

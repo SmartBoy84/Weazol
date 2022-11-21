@@ -179,14 +179,15 @@ int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
     uint32_t csflags = rk32(csflags_addr);
 
     csflags |= target_cs_flags;
+    csflags &= ~(CS_RESTRICT | CS_HARD | CS_KILL); // remove impediments
     wk32(csflags_addr, csflags);
 
     return 0;
 }
 
-int pacify(pid_t source, pid_t target)
+void pacify(pid_t source, pid_t target)
 {
-// jop is included for completion's sake but it seems all processes have jop_id = 0xFEEDFACE
+    // jop is included for completion's sake but it seems all processes have jop_id = 0xFEEDFACE
     addr64_t source_task = read_pointer(find_proc_by_task(source) + __task_offset);
     addr64_t target_task = read_pointer(find_proc_by_task(target) + __task_offset);
 
@@ -195,8 +196,6 @@ int pacify(pid_t source, pid_t target)
 
     uint64_t target_rop = rk64(target_task + __rop_pid_offset);
     uint64_t source_rop = rk64(source_task + __rop_pid_offset);
-
-    printf("target rop: %x, source rop: %x, target jop: %x, source jop: %x ", target_rop, source_rop, target_jop, source_jop);
 
     wk64(target_task + __jop_pid_offset + sizeof(uint64_t), source_rop);
     wk64(target_task + __jop_pid_offset, source_jop);
