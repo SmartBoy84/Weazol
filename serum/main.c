@@ -9,12 +9,9 @@
 #include "include/jbd.h"
 #include "include/tools.h"
 
-#define cynject "/binpack/opainject"
-#define pspawn_payload "/binpack/vamos.dylib"
-
 void test_hook()
 {
-	run("/bin/ls", NULL, NULL, NULL, NULL);
+	run("/bin/uname", "-a", NULL, NULL, NULL);
 	sleep(1);
 }
 
@@ -38,26 +35,25 @@ int main(const int argc, char **argv, char **envp)
 	printf("Testing hook my_pid: %d\n", find_pid(argv[0]));
 
 	void *libHandle;
-	if (access(pspawn_payload, R_OK))
+	if (access(PSPAWN_PAYLOAD, R_OK))
 	{
-		printf("%s not found!", pspawn_payload);
+		printf("%s not found!", PSPAWN_PAYLOAD);
 		return 0;
 	}
 
-	char *sign_dict[] = {pspawn_payload, cynject};
-	if (trust_bin(&sign_dict, 2))
+	char *sign_dict[] = {PSPAWN_PAYLOAD, TRUST_BIN};
+	if (trust_bin((char **)&sign_dict, 2))
 	{
 		printf("Failed to trust files!"); // payload may be signed but this ensures daemon is active (check jbd.c/init_me())
 		return 0;
 	}
 
 	char str[24];
-	// sprintf(str, "%d", getpid());
-	sprintf(str, "%d", 1); // inject into launchd
+	sprintf(str, "%d", getpid());
+	// sprintf(str, "%d", 1); // inject into launchd
+	printf("Interposing %s to pid %s", PSPAWN_PAYLOAD, str);
 
-	printf("Interposing %s to pid %s", pspawn_payload, str);
-
-	if (run(cynject, str, pspawn_payload, NULL, NULL))
+	if (run(TRUST_BIN, str, PSPAWN_PAYLOAD, NULL, NULL))
 	{
 		printf("Failed to inject!");
 		return 1;

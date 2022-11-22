@@ -173,7 +173,7 @@ int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
     addr64_t csflags_addr = target_proc + __cs_flags_offset;
 
     uint32_t flags = rk32(task_flags_addr);
-    flags |= target_cs_flags;
+    flags |= target_task_flags;
     wk32(task_flags_addr, flags | target_task_flags);
 
     uint32_t csflags = rk32(csflags_addr);

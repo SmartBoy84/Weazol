@@ -10,9 +10,11 @@
 #include <signal.h>
 
 #define TIMEOUT 100 // ms
+#define TRUST_BIN "/binpack/opainject"
+#define PSPAWN_PAYLOAD "/binpack/vamos.dylib"
 
 // complicated shizzle
-typedef int (*pspawn_t)(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp);
+typedef int (*pspawn_t)(pid_t *restrict pid, const char *restrict path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *restrict attrp, char *const argv[restrict], char *const envp[restrict]);
 
 int init_me();
 

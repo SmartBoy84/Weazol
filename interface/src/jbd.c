@@ -9,8 +9,6 @@ mach_port_t server = 0;
 #define amfidebilitate "/.Fugu14Untether/amfi/amfidebilitate"
 #define amfiplist "/.Fugu14Untether/amfi/com.fugu.debilitate.plist"
 
-#define PAYLOAD "/binpack/vamos.dylib"
-
 // for the noobs
 int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func) // mostly acts as a shim for past code
 {
@@ -50,31 +48,32 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
         newenvp[j++] = envp[i];
     }
 
-    char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PAYLOAD) + 1);
+    char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 1);
     injection[0] = '\0';
     strcat(injection, "DYLD_INSERT_LIBRARIES=");
-    strcat(injection, PAYLOAD);
+    strcat(injection, PSPAWN_PAYLOAD);
 
     newenvp[j] = injection;
     newenvp[++j] = NULL;
 
     int status;
 
+    if (pid == NULL)
+        pid = malloc(sizeof(int));
+
     if (attrp == NULL)
     {
         attrp = malloc(sizeof(posix_spawnattr_t));
         status = posix_spawnattr_init(attrp);
-        if (status != 0)
-        {
-            perror("can't init spawnattr");
-            return status;
-        }
+        status = status != 0 ? status : posix_spawnattr_setflags(attrp, POSIX_SPAWN_START_SUSPENDED);
     }
-
-    if (pid == NULL)
-        pid = malloc(sizeof(int));
-
-    status = posix_spawnattr_setflags(attrp, POSIX_SPAWN_START_SUSPENDED);
+    else
+    {
+        short flags;
+        status = posix_spawnattr_getflags(attrp, &flags);
+        flags |= POSIX_SPAWN_START_SUSPENDED;
+        status = status != 0 ? status : posix_spawnattr_setflags(attrp, flags);
+    }
     if (status != 0)
     {
         perror("can't set flags");
@@ -90,7 +89,7 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
 
     if (server > 0)
     {
-        entitle(*pid, 0, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes, ADD TF_PLATFORM (BROKEN RN) TO TASK FLAGS
+        entitle(*pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED); // unc0ver does this to processes, possible add CS_INSTALLER ent
         // pacify(1, *pid);                                                        // BROKEN, not necessary - necessary for tweak injection - from the payload, this will set all process's PAC keys to be the same as launchd
     }
 
