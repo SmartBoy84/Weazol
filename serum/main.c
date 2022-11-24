@@ -11,7 +11,7 @@
 
 void test_hook()
 {
-	run("/bin/uname", "-a", NULL, NULL, NULL);
+	run("/bin/tar", NULL, NULL, NULL, NULL);
 	sleep(1);
 }
 
@@ -41,7 +41,7 @@ int main(const int argc, char **argv, char **envp)
 		return 0;
 	}
 
-	char *sign_dict[] = {PSPAWN_PAYLOAD, TRUST_BIN};
+	char *sign_dict[] = {PSPAWN_PAYLOAD, INJECT_BIN};
 	if (trust_bin((char **)&sign_dict, 2))
 	{
 		printf("Failed to trust files!"); // payload may be signed but this ensures daemon is active (check jbd.c/init_me())
@@ -53,7 +53,7 @@ int main(const int argc, char **argv, char **envp)
 	// sprintf(str, "%d", 1); // inject into launchd
 	printf("Interposing %s to pid %s", PSPAWN_PAYLOAD, str);
 
-	if (run(TRUST_BIN, str, PSPAWN_PAYLOAD, NULL, NULL))
+	if (run(INJECT_BIN, str, PSPAWN_PAYLOAD, NULL, NULL))
 	{
 		printf("Failed to inject!");
 		return 1;
@@ -61,8 +61,8 @@ int main(const int argc, char **argv, char **envp)
 
 	// run("bigpsp", NULL, NULL, NULL, NULL);
 
-	for (;;)
-		test_hook();
+	// for (;;)
+	// 	test_hook();
 
 	return 0;
 }

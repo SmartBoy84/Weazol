@@ -1,18 +1,14 @@
 #include <stdio.h>
 #include <spawn.h>
 #include "fishhook.h"
-#include "include/jbd.h"
+#include "include/tools.h"
 #include "include/kernel.h"
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <dlfcn.h>
 
 // testing
 #include "include/machapi.h"
-
-#define GENERAL_LOG_PATH "/tmp/pspawn_payload_general.log"
-#define LAUNCHD_LOG_PATH "/tmp/pspawn_payload_launchd.log"
 
 pspawn_t orig_pspawn, orig_pspawnp;
 
@@ -39,12 +35,12 @@ static int fake_posix_spawn_common(pid_t *restrict pid, const char *restrict pat
 
 	fclose(fptr);
 
-	status = posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, 0); // this function handles everything for us
-	if (status == 85)																// (error for untrusted binary)
+	status = posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, ENTITLE | INJECT_PAYLOAD); // this function handles everything for us
+	if (status == 85)																					   // (error for untrusted binary)
 	{
 		printf("[PSPAWN] %s not trusted?\n", path);
-		run(TRUST_BIN, path, NULL, NULL, origfunc);
-		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, 0); // not our fault anymore
+		run(TRUST_BIN, path, NULL, NULL, NULL);
+		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, ENTITLE | INJECT_PAYLOAD); // not our fault anymore
 	}
 	else
 	{
@@ -63,6 +59,7 @@ static int fake_posix_spawnp(pid_t *restrict pid, const char *restrict path, con
 	return fake_posix_spawn_common(pid, path, file_actions, attrp, argv, envp, orig_pspawnp);
 }
 
+// prefer this over fishook (which is ancient and 3rd party scum)
 DYLD_INTERPOSE(fake_posix_spawn, posix_spawn);
 DYLD_INTERPOSE(fake_posix_spawnp, posix_spawnp);
 
@@ -72,6 +69,8 @@ void *rebind_pspawns()
 		{"posix_spawn", (void *)fake_posix_spawn, (void **)&orig_pspawn},
 		{"posix_spawnp", (void *)fake_posix_spawnp, (void **)&orig_pspawnp}};
 	rebind_symbols(rebinds, 2);
+
+	return NULL;
 }
 
 __attribute__((constructor)) static void ctor(void)
@@ -84,15 +83,16 @@ __attribute__((constructor)) static void ctor(void)
 
 	fclose(fptr);
 
-	char *dyld = NULL;
-	size_t len = 0;
-	if ((len = strlen(getenv("DYLD_INSERT_LIBRARIES"))))
-	{
-		dyld = malloc(len);
-		snprintf(dyld, len, "%s", getenv("DYLD_INSERT_LIBRARIES"));
-	}
+	char *dyld = getenv("DYLD_INSERT_LIBRARIES");
 
-	if (dyld != NULL && strstr(dyld, PSPAWN_PAYLOAD))
+	if (dyld != NULL && strstr(dyld, PSPAWN_PAYLOAD) != NULL)
+	{
+		printf("PSPAWN_PAYLOAD in env, using normal DYLD interposing: %s", dyld);
+
+		// orig_pspawn = posix_spawn;
+		// orig_pspawnp = posix_spawnp;
+	}
+	else
 	{
 		printf("PSPAWN_PAYLOAD not in env");
 		if (getpid() == 1) // so we don't slow down launchd
@@ -102,13 +102,6 @@ __attribute__((constructor)) static void ctor(void)
 		}
 		else
 			rebind_pspawns();
-	}
-	else
-	{
-		printf("PSPAWN_PAYLOAD in env, using normal DYLD interposing");
-
-		orig_pspawn = posix_spawn;
-		orig_pspawnp = posix_spawnp;
 	}
 }
 

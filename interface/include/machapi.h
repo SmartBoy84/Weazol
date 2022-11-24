@@ -1,5 +1,5 @@
-#ifndef AMFI_h
-#define AMFI_h
+#ifndef AMFI_H_
+#define AMFI_H_
 
 #define VERSION "1.2"
 // Darwin

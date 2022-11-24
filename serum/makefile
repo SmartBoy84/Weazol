@@ -33,7 +33,7 @@ RERUN=$(MAKE) --no-print-directory
 FLAGS=$(INCLUDE) $(ARCH) $(CUSTOM)
 
 all: build sign
-do: build sign upload
+do: build sign upload clean
 
 build:
 	@echo "$(arrow)$(green)Compiling ${APP_FILE} to ${APP} and ${DYLIB_FILE} to ${DYLIB}$(end)"

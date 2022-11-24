@@ -6,23 +6,16 @@
 #include <sys/stat.h>
 #include "mach/mach.h"
 #include "string.h"
-#include <spawn.h>
-#include <signal.h>
+
+#define server_name "com.fugu.amfi"
+#define launchctl "/.Fugu14Untether/bin/launchctl"
+#define amfidebilitate "/.Fugu14Untether/amfi/amfidebilitate"
+#define amfiplist "/.Fugu14Untether/amfi/com.fugu.debilitate.plist"
 
 #define TIMEOUT 100 // ms
-#define TRUST_BIN "/binpack/opainject"
-#define PSPAWN_PAYLOAD "/binpack/vamos.dylib"
 
-// complicated shizzle
-typedef int (*pspawn_t)(pid_t *restrict pid, const char *restrict path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *restrict attrp, char *const argv[restrict], char *const envp[restrict]);
-
+// init mach shizzle
 int init_me();
-
-// shortcut to posixspawn
-int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func);
-
-// my custom posix_spawn
-int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp, pspawn_t custom_func, int execution_end_wait);
 
 // add a binary to trustcache!
 int trust_bin(char **path, int path_n);
