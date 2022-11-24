@@ -9,6 +9,8 @@
 // testing
 #include "include/machapi.h"
 
+#define xpcproxy "/usr/libexec/xpcproxy"
+
 extern pspawn_t orig_pspawn, orig_pspawnp;
 
 char *get_name();

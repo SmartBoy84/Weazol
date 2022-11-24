@@ -7,8 +7,6 @@ void *rebind_pspawns()
 		{"posix_spawn", (void *)fake_posix_spawn, (void **)&orig_pspawn},
 		{"posix_spawnp", (void *)fake_posix_spawnp, (void **)&orig_pspawnp}};
 	rebind_symbols(rebinds, 2);
-
-	return NULL;
 }
 
 __attribute__((constructor)) static void ctor(void)
@@ -21,7 +19,6 @@ __attribute__((constructor)) static void ctor(void)
 
 	fclose(fptr);
 
-	printf("LAUNCHD_PAYLOAD not in env");
 	if (getpid() == 1) // so we don't slow down launchd
 	{
 		pthread_t thd;

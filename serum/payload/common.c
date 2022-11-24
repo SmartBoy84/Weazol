@@ -17,19 +17,28 @@ int current_process = 0;
 
 int fake_posix_spawn_common(pid_t *restrict pid, const char *restrict path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *restrict attrp, char *const argv[restrict], char *const envp[restrict], pspawn_t origfunc)
 {
+	// if (strcmp(get_name(), xpcproxy) == 0)
+	// 	abort();
+
 	const char *name = "/bob.txt";
 	FILE *fptr = fopen(name, "a+");
 
-	fprintf(fptr, "%s: %s\n", get_name(), path);
-	fflush(fptr);
+	fprintf(fptr, "Parent: %s -> child: %s\n", get_name(), path);
 
+	fflush(fptr);
 	fclose(fptr);
+
+	if (strcmp(path, xpcproxy) == 0)															   // journey for xpcproxy stops here - may live to regret it, remember how it execs?
+		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, INJECT_PAYLOAD); // crashes if I give it the typical entitlements TODO: figure out which ones (or if that's even the issue here)
 
 	status = posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, ENTITLE | INJECT_PAYLOAD); // this function handles everything for us
 	if (status == 85)																					   // (error for untrusted binary)
 	{
+		// trust_bin((char **)&path, 1);
+
 		printf("[PSPAWN] %s not trusted?\n", path);
-		run(TRUST_BIN, path, NULL, NULL, NULL);
+		run(TRUST_BIN, path, NULL, NULL, origfunc);
+
 		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, ENTITLE | INJECT_PAYLOAD); // not our fault anymore
 	}
 	else

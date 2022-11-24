@@ -41,8 +41,8 @@ int main(const int argc, char **argv, char **envp)
 		return 0;
 	}
 
-	char *sign_dict[] = {FISHOOK_PSPAWN_PAYLOAD, INJECT_BIN};
-	if (trust_bin((char **)&sign_dict, 2))
+	char *sign_dict[] = {INJECT_BIN, FISHOOK_PSPAWN_PAYLOAD, PSPAWN_PAYLOAD, "/bin/ps"};
+	if (trust_bin((char **)&sign_dict, 5))
 	{
 		printf("Failed to trust files!"); // payload may be signed but this ensures daemon is active (check jbd.c/init_me())
 		return 0;
@@ -59,10 +59,10 @@ int main(const int argc, char **argv, char **envp)
 		return 1;
 	}
 
-	run("bigpsp", NULL, NULL, NULL, NULL);
+	// run("bigpsp", NULL, NULL, NULL, NULL);
 
-	for (;;)
-		test_hook();
+	printf("\n\nRunning test: \n");
+	test_hook();
 
 	return 0;
 }

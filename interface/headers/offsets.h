@@ -37,9 +37,10 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 #define CS_PLATFORM_BINARY 0x04000000
 #define CS_GET_TASK_ALLOW 0x00000004
 #define CS_DEBUGGED 0x10000000
-#define CS_HARD 0x00000100     /* don't load invalid pages */
-#define CS_KILL 0x00000200     /* kill process if it becomes invalid */
-#define CS_RESTRICT 0x00000800 /* tell dyld to treat restricted */
+#define CS_HARD 0x00000100      /* don't load invalid pages */
+#define CS_KILL 0x00000200      /* kill process if it becomes invalid */
+#define CS_RESTRICT 0x00000800  /* tell dyld to treat restricted */
+#define CS_INSTALLER 0x00000008 /* has installer entitlement */
 
 // proc struc
 #define __task_offset 0x10
