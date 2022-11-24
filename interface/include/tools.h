@@ -10,7 +10,8 @@
 // integral file locations
 #define TRUST_BIN "/binpack/trust"
 #define INJECT_BIN "/binpack/opainject"
-#define PSPAWN_PAYLOAD "/binpack/vamos.dylib"
+#define PSPAWN_PAYLOAD "/binpack/dyld_vamos.dylib"
+#define FISHOOK_PSPAWN_PAYLOAD "/binpack/fishook_vamos.dylib"
 
 // custom posix_spawn flags
 #define INJECT_PAYLOAD (1) /* inject posix_spawn hook */

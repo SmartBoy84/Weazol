@@ -1,12 +1,19 @@
 APP:=pspboi
-APP_FILE:=main.c src/*.c -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
+APP_FILE:=main.c src/*.c -Iinclude -I. -L. -Iheaders -Lheaders
 ENT:=ent.plist
 APP_FLAG:=
 
-DYLIB:=vamos.dylib
 DYLIB_FOLDER:=payload
-DYLIB_FILE:=${DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -L${DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
-DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO
+
+DYLD_DYLIB:=dyld_vamos.dylib
+DYLD_DYLIB_FOLDER:=payload/dyld_payload
+DYLD_DYLIB_FILE:=${DYLIB_FOLDER}/*.c ${DYLD_DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -I${DYLD_DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
+DYLD_DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO
+
+FISHOOK_DYLIB:=fishook_vamos.dylib
+FISHOOK_DYLIB_FOLDER:=payload/fishook_payload
+FISHOOK_DYLIB_FILE:=${DYLIB_FOLDER}/*.c ${FISHOOK_DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -I${FISHOOK_DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
+FISHOOK_DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO
 
 INCLUDE:=
 TOOLCHAIN:=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/aarch64-apple-darwin-clang
@@ -38,18 +45,20 @@ do: build sign upload clean
 build:
 	@echo "$(arrow)$(green)Compiling ${APP_FILE} to ${APP} and ${DYLIB_FILE} to ${DYLIB}$(end)"
 	@${CC} ${FLAGS} ${APP_FILE} -o ${APP}
-	@${CC} ${FLAGS} ${DYLIB_FILE} ${DYLIB_FLAG} -o ${DYLIB}
+	@${CC} ${FLAGS} ${DYLD_DYLIB_FILE} ${DYLD_DYLIB_FLAG} -o ${DYLD_DYLIB}
+	@${CC} ${FLAGS} ${FISHOOK_DYLIB_FILE} ${FISHOOK_DYLIB_FLAG} -o ${FISHOOK_DYLIB}
 
 sign:
 	@echo "$(arrow)$(green)Signing ${APP} and ${DYLIB}$(red)"
 	@chmod +x ${APP}
 	@ldid -S$(ENT) $(APP)
-	@ldid -S$(ENT) $(DYLIB)
+	@ldid -S$(ENT) $(FISHOOK_DYLIB)
+	@ldid -S$(ENT) $(DYLD_DYLIB)
 
 upload:
 	@echo "$(arrow)$(green)Uploading ${APP}$(end)"
 	-@ssh -p $(PORT) $(ADDR) "rm $(UPLOAD_DIR)/$(APP) $(UPLOAD_DIR)/$(DYLIB)"
-	@scp -P $(PORT) ${APP} $(DYLIB) ${ADDR}:${UPLOAD_DIR}
+	@scp -P $(PORT) ${APP} $(FISHOOK_DYLIB) $(DYLD_DYLIB) ${ADDR}:${UPLOAD_DIR}
 
 run:
 	@echo "$(arrow)$(green)Running ${APP}$(red)"
@@ -58,4 +67,4 @@ run:
 
 clean:
 	@echo "$(arrow)$(green)Cleaning up!$(end)"
-	@rm ${APP} $(DYLIB)
+	@rm ${APP} $(DYLD_DYLIB) $(FISHOOK_DYLIB)

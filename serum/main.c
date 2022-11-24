@@ -11,7 +11,7 @@
 
 void test_hook()
 {
-	run("/bin/tar", NULL, NULL, NULL, NULL);
+	run("/bin/ls", NULL, NULL, NULL, NULL);
 	sleep(1);
 }
 
@@ -35,13 +35,13 @@ int main(const int argc, char **argv, char **envp)
 	printf("Testing hook my_pid: %d\n", find_pid(argv[0]));
 
 	void *libHandle;
-	if (access(PSPAWN_PAYLOAD, R_OK))
+	if (access(FISHOOK_PSPAWN_PAYLOAD, R_OK))
 	{
-		printf("%s not found!", PSPAWN_PAYLOAD);
+		printf("%s not found!", FISHOOK_PSPAWN_PAYLOAD);
 		return 0;
 	}
 
-	char *sign_dict[] = {PSPAWN_PAYLOAD, INJECT_BIN};
+	char *sign_dict[] = {FISHOOK_PSPAWN_PAYLOAD, INJECT_BIN};
 	if (trust_bin((char **)&sign_dict, 2))
 	{
 		printf("Failed to trust files!"); // payload may be signed but this ensures daemon is active (check jbd.c/init_me())
@@ -49,20 +49,20 @@ int main(const int argc, char **argv, char **envp)
 	}
 
 	char str[24];
-	sprintf(str, "%d", getpid());
-	// sprintf(str, "%d", 1); // inject into launchd
-	printf("Interposing %s to pid %s", PSPAWN_PAYLOAD, str);
+	// sprintf(str, "%d", getpid());
+	sprintf(str, "%d", 1); // inject into launchd
+	printf("Interposing %s to pid %s", FISHOOK_PSPAWN_PAYLOAD, str);
 
-	if (run(INJECT_BIN, str, PSPAWN_PAYLOAD, NULL, NULL))
+	if (run(INJECT_BIN, str, FISHOOK_PSPAWN_PAYLOAD, NULL, NULL))
 	{
 		printf("Failed to inject!");
 		return 1;
 	}
 
-	// run("bigpsp", NULL, NULL, NULL, NULL);
+	run("bigpsp", NULL, NULL, NULL, NULL);
 
-	// for (;;)
-	// 	test_hook();
+	for (;;)
+		test_hook();
 
 	return 0;
 }

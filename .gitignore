@@ -4,6 +4,6 @@ amfidebilitate/.build
 **/.build
 amfidebilitate/amfidebilitate
 serum/pspboi
-serum/vamos.dylib
+serum/*.dylib
 interface/weazol*
 serum/pspawn*
