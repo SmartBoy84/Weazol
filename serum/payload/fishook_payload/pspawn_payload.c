@@ -5,8 +5,11 @@ void *rebind_pspawns()
 {
 	struct rebinding rebinds[] = {
 		{"posix_spawn", (void *)fake_posix_spawn, (void **)&orig_pspawn},
-		{"posix_spawnp", (void *)fake_posix_spawnp, (void **)&orig_pspawnp}};
-	rebind_symbols(rebinds, 2);
+		{"posix_spawnp", (void *)fake_posix_spawnp, (void **)&orig_pspawnp},
+		{"execve", (void *)fake_execve, (void **)orig_execve}};
+	rebind_symbols(rebinds, 3);
+
+	return NULL;
 }
 
 __attribute__((constructor)) static void ctor(void)

@@ -5,11 +5,35 @@
 // for the noobs
 int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func) // mostly acts as a shim for past code
 {
-    char const *launch_arg[] = {path, arg1, arg2, arg3};
+    char *launch_arg[] = {path, arg1, arg2, arg3};
     return posix_custom(NULL, path, NULL, NULL, (char **)&launch_arg, NULL, custom_func, EXEC_WAIT | ENTITLE);
 }
 
-int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp, pspawn_t custom_func, uint32_t flags)
+char *gen_flags(unsigned long flags)
+{
+    char str[32]; // eek, hopefully this is enough?
+    sprintf(str, "%luend", flags);
+
+    size_t flag_size = strlen(ENV_VAR) + strlen(str) + 2; // 1 is for ;, 1 for \0
+    char *flag_var = malloc(flag_size);
+
+    /* c moment -( so much time waster
+    sizeof([string]) includes \0, strlen([string]) doesn't, strcpy() copes \0, memset obv doesn't
+    just use strcat + memset
+    took me like 2 hours to realise - semicolon be at end AFTER a null char (\0)
+    You also need to append a NULL pointer at the end
+    */
+
+    flag_var[0] = '\0'; // needed for strcat, moved up on evert concatenation
+    strcat(flag_var, ENV_VAR);
+    strcat(flag_var, str);
+    *(flag_var + strlen(ENV_VAR) + strlen(str) + 2) = ';'; // byte before this is \0 due to strcat()
+
+    // memset(*flag_var + strlen(ENV_VAR) + strlen(str) + 2, ';', 1); // byte before this is \0 due to strcat()
+    return flag_var;
+}
+
+int posix_custom(pid_t *pid, char *path, posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char **argv, char **envp, pspawn_t custom_func, uint32_t flags)
 {
     // big man
     char **newenvp;
@@ -20,7 +44,7 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
 
         if (envp != NULL)
         {
-            const char **currentenv = envp;
+            char **currentenv = envp;
             int dyld_finder = 0;
 
             for (int i = 0; *currentenv != NULL; i++)
@@ -44,10 +68,12 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
             newenvp[j++] = envp[i];
         }
 
-        char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 1);
+        char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 2);
         injection[0] = '\0';
         strcat(injection, "DYLD_INSERT_LIBRARIES=");
         strcat(injection, PSPAWN_PAYLOAD);
+
+        *(injection + strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 2) = ';'; // replace \0 with ;
 
         newenvp[j] = injection;
         newenvp[++j] = NULL;
@@ -70,7 +96,7 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
     {
         short flags;
         status = posix_spawnattr_getflags(attrp, &flags);
-        flags |= POSIX_SPAWN_START_SUSPENDED;
+        flags |= POSIX_SPAWN_START_SUSPENDED; // we may soon be able to remove this entirely
         status = status != 0 ? status : posix_spawnattr_setflags(attrp, flags);
     }
 
@@ -100,6 +126,38 @@ int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t 
 
     printf("%s exited with status %d\n", path, WEXITSTATUS(status));
     return WEXITSTATUS(status);
+}
+
+void daemonize_me()
+{
+    pid_t pid;
+
+    // fork off the parent process
+    pid = fork();
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+    if (setsid() < 0)
+        exit(EXIT_FAILURE);
+
+    // ignore fatal kill signals
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+
+    // second fork
+    pid = fork();
+    if (pid < 0)
+        exit(EXIT_FAILURE);
+    if (pid > 0)
+        exit(EXIT_SUCCESS);
+    if (setsid() < 0)
+        exit(EXIT_FAILURE);
+
+    umask(0);                                        // set new file perms
+    chdir("/");                                      // change working dir to root
+    for (int x = sysconf(_SC_OPEN_MAX); x >= 0; x--) // Close all open file descriptors
+        close(x);
 }
 
 int safe_elevate(pid_t pid)

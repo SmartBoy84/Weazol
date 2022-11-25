@@ -18,14 +18,22 @@
 #define EXEC_WAIT (1 << 1) /* wait for child process to exit */
 #define ENTITLE (1 << 2)   /* give child process standard entitlements (remember to add others) */
 
-// posix type definitions for fishook
-typedef int (*pspawn_t)(pid_t *restrict pid, const char *restrict path, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *restrict attrp, char *const argv[restrict], char *const envp[restrict]);
+#define ENV_VAR "CUSTOM_POSIX_FLAGS="
+
+// for custom pspawn 
+typedef int (*pspawn_t)(pid_t *restrict pid,  char *restrict path,  posix_spawn_file_actions_t *file_actions,  posix_spawnattr_t *restrict attrp, char * argv[restrict], char * envp[restrict]);
 
 // shortcut to posixspawn
 int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func);
 
+// gen custom flags
+char *gen_flags(unsigned long flags);
+
 // my custom posix_spawn
-int posix_custom(pid_t *pid, const char *path, const posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *const *argv, char *const *envp, pspawn_t custom_func, uint32_t flags);
+int posix_custom(pid_t *pid,  char *path,  posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char * *argv, char * *envp, pspawn_t custom_func, uint32_t flags);
+
+// utilise a double fork to detach process from parent
+void daemonize_me();
 
 // safely elevate a process
 int safe_elevate(pid_t pid);

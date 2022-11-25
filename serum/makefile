@@ -43,13 +43,13 @@ all: build sign
 do: build sign upload clean
 
 build:
-	@echo "$(arrow)$(green)Compiling ${APP_FILE} to ${APP} and ${DYLIB_FILE} to ${DYLIB}$(end)"
+	@echo "$(arrow)$(green)Compiling...$(end)"
 	@${CC} ${FLAGS} ${APP_FILE} -o ${APP}
 	@${CC} ${FLAGS} ${DYLD_DYLIB_FILE} ${DYLD_DYLIB_FLAG} -o ${DYLD_DYLIB}
 	@${CC} ${FLAGS} ${FISHOOK_DYLIB_FILE} ${FISHOOK_DYLIB_FLAG} -o ${FISHOOK_DYLIB}
 
 sign:
-	@echo "$(arrow)$(green)Signing ${APP} and ${DYLIB}$(red)"
+	@echo "$(arrow)$(green)Signing...$(red)"
 	@chmod +x ${APP}
 	@ldid -S$(ENT) $(APP)
 	@ldid -S$(ENT) $(FISHOOK_DYLIB)
@@ -57,7 +57,7 @@ sign:
 
 upload:
 	@echo "$(arrow)$(green)Uploading ${APP}$(end)"
-	-@ssh -p $(PORT) $(ADDR) "rm $(UPLOAD_DIR)/$(APP) $(UPLOAD_DIR)/$(DYLIB)"
+	-@ssh -p $(PORT) $(ADDR) "rm $(UPLOAD_DIR)/$(APP) $(UPLOAD_DIR)/$(DYLD_DYLIB) $(UPLOAD_DIR)/$(FISHOOK_DYLIB)"
 	@scp -P $(PORT) ${APP} $(FISHOOK_DYLIB) $(DYLD_DYLIB) ${ADDR}:${UPLOAD_DIR}
 
 run:
