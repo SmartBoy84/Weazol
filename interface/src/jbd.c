@@ -2,6 +2,7 @@
 #include "include/tools.h"
 #include "include/cdhash.h"
 #include "include/kernel.h"
+#include "headers/shenanigans.h"
 
 mach_port_t server = 0;
 
@@ -39,9 +40,16 @@ int init_me()
 
 int trust_bin(char **path, int path_n)
 {
+    int ret = 0;
+
     cdhash_list *cdhash_master = malloc(sizeof(cdhash_list) * path_n);
     int count = 0; // number of valid cdhashes
     int size = 0;  // each cdhash struct can contain multiple hashes
+
+    KDetails *kdeets = init_kdetails();
+    addr64_t tc_start = read_pointer(kdeets->tcroot);
+    kern_tc *tc = malloc(sizeof(kern_tc));
+    cdhash *hash = malloc(sizeof(cdhash));
 
     for (int i = 0; i < path_n; i++)
     {
@@ -60,8 +68,7 @@ int trust_bin(char **path, int path_n)
             continue;
         }
 
-        cdhash *c;
-        int ret_count = find_cdhash(path[i], sb.st_size, &c);
+        int ret_count = find_cdhash(path[i], sb.st_size, &hash);
 
         if (ret_count == 0)
         {
@@ -69,25 +76,49 @@ int trust_bin(char **path, int path_n)
             continue;
         }
 
+        // check if it's already in custom trustcache
+        addr64_t tc_ptr = tc_start;
+
+        while (!kread(tc_ptr, tc, sizeof(kern_tc)))
+        {
+            tc_ptr += sizeof(kern_tc);
+
+            for (int i = 0; i < tc->header.size; i++)
+            {
+                if (!kread(tc_ptr + (i * sizeof(cdhash)), hash, sizeof(cdhash)))
+                {
+                    for (int z = 0; z < ret_count; z++)
+                    {
+                        if (memcmp(hash->cdhash, c[z].cdhash, 20))
+                            goto found;
+                    }
+                }
+
+                tc_ptr += sizeof(cdhash);
+            }
+
+            tc_ptr = read_pointer((addr64_t)tc->next);
+        }
+
         cdhash_master[i].count = ret_count;
-        cdhash_master[i].hash = c;
+        cdhash_master[i].hash = hash;
 
         count++;
         size += ret_count;
 
-        printf("Adding %s\n", path[i]);
+        // we come here when it's hash is found to be already in custom trustcache
+    found:
+        continue;
     }
 
     if (count == 0)
     {
-        printf("Failed to compute ANY hash!");
-        return 1;
+        ret = 1;
+        goto end;
     }
 
-    printf("Found %d valid hashes, adding", count);
-
-    cdhash *c = malloc(sizeof(cdhash) * size);
-    cdhash *c_ptr = c;
+    cdhash *final_hash = malloc(sizeof(cdhash) * size);
+    cdhash *c_ptr = final_hash;
 
     for (int i = 0; i < count; i++)
     {
@@ -107,15 +138,22 @@ int trust_bin(char **path, int path_n)
     //     printf("\n");
     // }
 
-    int ret = 0;
-
     if (size == 1)
-        ret = sub_hash((uint8_t *)c, PERSIST_MEM);
+        ret = sub_hash((uint8_t *)final_hash, PERSIST_MEM);
     else if (size > 1)
-        ret = add_hashs((uint8_t *)c, size, PERSIST_MEM) == 0;
+        ret = add_hashs((uint8_t *)final_hash, size, PERSIST_MEM) == 0;
 
     if (ret == 1)
+    {
+        ret = 1;
         printf("Failed to add hash!");
+        goto end;
+    }
+
+end:
+    free(tc);
+    free(hash);
+    free(final_hash);
 
     return ret;
 }

@@ -52,6 +52,7 @@ func fetch_deets(kdetails: UnsafeMutablePointer<KDetails>) -> Int {
         kdetails.pointee.allproc = try pe.mem.r64(virt: pe.slide(pe.offsets.allProcAddr))
         kdetails.pointee.kbase = pe.mem.kernelVirtBase
         kdetails.pointee.kslide = pe.mem.kernelSlide
+        kdetails.pointee.tcroot = pe.slide(pe.mem.offsets.loadedTCRoot)
 
         return 0
     } catch {

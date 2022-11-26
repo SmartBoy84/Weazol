@@ -159,9 +159,9 @@ addr64_t find_proc_by_task(pid_t pid)
     return proc;
 }
 
-int add_entitlement() {
+// int add_entitlement() {
     
-}
+// }
 
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
 {

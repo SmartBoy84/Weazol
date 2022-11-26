@@ -38,6 +38,7 @@ typedef struct
   uint64_t allproc;
   uint64_t kbase;
   uint64_t kslide;
+  uint64_t tcroot;
 } KDetails;
 
 typedef struct

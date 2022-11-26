@@ -52,7 +52,8 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 		// trust_bin((char **)&path, 1);
 
 		printf("[PSPAWN] %s not trusted?\n", path);
-		run(TRUST_BIN, path, NULL, NULL, origfunc);
+		trust_bin(&path, 1);
+		// run(TRUST_BIN, path, NULL, NULL, origfunc);
 
 		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags); // not our fault anymore
 	}
@@ -84,7 +85,8 @@ int fake_execve_common(char *pathname, char *argv[], char *envp[], execve_t orig
 	fflush(fptr);
 	fclose(fptr);
 
-	run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+	// run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+	trust_bin(&pathname, 1);
 
 	return origfunc(pathname, argv, envp);
 }
