@@ -160,7 +160,7 @@ addr64_t find_proc_by_task(pid_t pid)
 }
 
 int add_entitlement() {
-    
+    return 0;
 }
 
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)

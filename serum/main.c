@@ -12,6 +12,8 @@
 
 // slide(offsets.loadedTCRoot) to check if hash is in tc
 
+bool IOSurface_init();
+
 void test_hook()
 {
 	char *path = "/bin/date";
@@ -25,6 +27,8 @@ void test_hook()
 
 int main(const int argc, char **argv, char **envp)
 {
+	IOSurface_init();
+	return 0;
 
 	if (getuid() > 0 && safe_elevate(getpid()) && entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER))
 		return 1;
