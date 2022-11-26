@@ -18,7 +18,7 @@ FISHOOK_DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPT
 INCLUDE:=
 TOOLCHAIN:=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/aarch64-apple-darwin-clang
 ARCH=-target arm64e-apple-ios14.4 -arch arm64e
-CUSTOM=-isysroot "$(THEOS)/sdks/iPhoneOS14.5.sdk" -DCOMMONCRYPTO
+CUSTOM=-isysroot "$(THEOS)/sdks/iPhoneOS14.5.sdk" -DCOMMONCRYPTO -framework CoreFoundation -framework IOKit IOKit/*.c
 #-I. -Iinclude -Linclude -L.
 
 IP:=le-carote
