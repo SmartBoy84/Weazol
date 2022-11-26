@@ -22,3 +22,11 @@ Nope, will need to copy over the kernel ucred
 
 Note a lot of the kernel structs are found in sdk and can be imported (e.g., sys/ucred.h)
 https://twitter.com/xina520/status/1515720109255393282
+
+gen_flags() -
+    /* c moment -( so much time waster
+    sizeof([string]) includes \0, strlen([string]) doesn't, strcpy() copes \0, memset obv doesn't
+    just use strcat + memset
+    took me like 2 hours to realise - semicolon be at end AFTER a null char (\0)
+    You also need to append a NULL pointer at the end
+    */

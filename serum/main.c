@@ -5,9 +5,12 @@
 #include <spawn.h>
 #include <string.h>
 #include <stdlib.h>
+#include "dlfcn.h"
 
 #include "include/jbd.h"
 #include "include/tools.h"
+
+// slide(offsets.loadedTCRoot) to check if hash is in tc
 
 void test_hook()
 {
@@ -22,11 +25,6 @@ void test_hook()
 
 int main(const int argc, char **argv, char **envp)
 {
-	for (char **env = envp; *env != 0; env++)
-	{
-		char *thisEnv = *env;
-		printf("%s\n", thisEnv);
-	}
 
 	if (getuid() > 0 && safe_elevate(getpid()) && entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER))
 		return 1;
@@ -65,7 +63,6 @@ int main(const int argc, char **argv, char **envp)
 
 	printf("\n\nRunning test: \n");
 	test_hook();
-	return 0;
 
 	// // run("bigpsp", NULL, NULL, NULL, NULL);
 
@@ -80,7 +77,7 @@ int main(const int argc, char **argv, char **envp)
 	// }
 
 	printf("Starting up dropbear");
-	// daemonize_me();
+	daemonize_me();
 
 	const char *name = "/myprettylog.txt";
 	FILE *fptr = fopen(name, "a+");
@@ -90,13 +87,13 @@ int main(const int argc, char **argv, char **envp)
 	dup2(fileno(fptr), STDERR_FILENO);
 
 	char *launch_arg[] = {"/binpack/usr/sbin/dropbear", "-E", "-F", "-p", "43", "-S", "/binpack/bin/sh", "-H", "/binpack/usr/sbin:/binpack/usr/bin:/binpack/sbin:/binpack/bin:/usr/sbin:/usr/bin:/sbin:/bin", "-r", "/.Fugu14Untether/dropbear_rsa_host_key", NULL};
-	char *launch_flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
+	// char *launch_flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
 
 	posix_spawnattr_t *attrp = malloc(sizeof(posix_spawnattr_t));
 	posix_spawnattr_init(attrp);
 	posix_spawnattr_setflags(attrp, POSIX_SPAWN_SETEXEC);
 
-	posix_spawn(NULL, "/binpack/usr/sbin/dropbear", NULL, NULL, (char **)&launch_arg, (char **)&launch_flags);
+	posix_spawn(NULL, "/binpack/usr/sbin/dropbear", NULL, NULL, (char **)&launch_arg, NULL);
 
 	fprintf(stderr, "We shouldn't be here...\n");
 

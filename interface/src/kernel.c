@@ -159,10 +159,14 @@ addr64_t find_proc_by_task(pid_t pid)
     return proc;
 }
 
+int add_entitlement() {
+    
+}
+
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
 {
     uint64_t target_proc = 0;
-    if (!(target_proc = find_proc_by_task(pid)))
+    if (!(target_proc = pid == getpid() ? find_proc(getpid()) : find_proc_by_task(pid)))
     {
         printf("Failed to find child proc");
         return 1;

@@ -29,6 +29,23 @@ Slide can be found by finding _offset of actual runtime load address (krw_handle
 */
 #define __unslidVirtBase 0xFFFFFFF007004000
 
+// https://opensource.apple.com/source/xnu/xnu-6153.41.3/bsd/sys/codesign.h.auto.html
+/* csops  operations */
+#define CS_OPS_STATUS 0            /* return status */
+#define CS_OPS_MARKINVALID 1       /* invalidate process */
+#define CS_OPS_MARKHARD 2          /* set HARD flag */
+#define CS_OPS_MARKKILL 3          /* set KILL flag (sticky) */
+#define CS_OPS_CDHASH 5            /* get code directory hash */
+#define CS_OPS_PIDOFFSET 6         /* get offset of active Mach-o slice */
+#define CS_OPS_ENTITLEMENTS_BLOB 7 /* get entitlements blob */
+#define CS_OPS_MARKRESTRICT 8      /* set RESTRICT flag (sticky) */
+#define CS_OPS_SET_STATUS 9        /* set codesign flags */
+#define CS_OPS_BLOB 10             /* get codesign blob */
+#define CS_OPS_IDENTITY 11         /* get codesign identity */
+#define CS_OPS_CLEARINSTALLER 12   /* clear INSTALLER flag */
+#define CS_OPS_CLEARPLATFORM 13    /* clear platform binary status (DEVELOPMENT-only) */
+#define CS_OPS_TEAMID 14           /* get team id */
+
 // flag constants - https://opensource.apple.com/source/xnu/xnu-4570.1.46/osfmk/kern/cs_blobs.h
 // proc task flags
 #define TF_PLATFORM 0x00000400

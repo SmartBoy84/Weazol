@@ -6,7 +6,21 @@
 int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func) // mostly acts as a shim for past code
 {
     char *launch_arg[] = {path, arg1, arg2, arg3};
-    return posix_custom(NULL, path, NULL, NULL, (char **)&launch_arg, NULL, custom_func, EXEC_WAIT | ENTITLE);
+    return posix_custom(NULL, path, NULL, NULL, (char **)&launch_arg, NULL, custom_func, EXEC_WAIT | ENTITLE); // don't inject payload
+}
+
+char *gen_var(char *name, char *val)
+{
+    size_t size = strlen(name) + strlen(val) + 2; // 1 is for ;, 1 for \0
+    char *target = malloc(size);
+
+    target[0] = '\0';
+    strcat(target, name);
+    strcat(target, val);
+
+    target[size - 1] = ';'; // add ; at the end, AFTER \0
+
+    return target;
 }
 
 char *gen_flags(unsigned long flags)
@@ -14,73 +28,53 @@ char *gen_flags(unsigned long flags)
     char str[32]; // eek, hopefully this is enough?
     sprintf(str, "%luend", flags);
 
-    size_t flag_size = strlen(ENV_VAR) + strlen(str) + 2; // 1 is for ;, 1 for \0
-    char *flag_var = malloc(flag_size);
+    return gen_var(ENV_VAR, str);
+}
 
-    /* c moment -( so much time waster
-    sizeof([string]) includes \0, strlen([string]) doesn't, strcpy() copes \0, memset obv doesn't
-    just use strcat + memset
-    took me like 2 hours to realise - semicolon be at end AFTER a null char (\0)
-    You also need to append a NULL pointer at the end
-    */
+char **add_var(char **envp, uint32_t flags)
+{
+    // aight, you need to do a lot of free() here bro
+    // structure if envp!=NULL: [...envp, CUSTOM_POSIX_FLAGS, NULL]
+    // if envp == NULL: [DYLD_INSERT?, CUSTOM_POSIX_FLAGS, NULL]
 
-    flag_var[0] = '\0'; // needed for strcat, moved up on evert concatenation
-    strcat(flag_var, ENV_VAR);
-    strcat(flag_var, str);
-    *(flag_var + strlen(ENV_VAR) + strlen(str) + 2) = ';'; // byte before this is \0 due to strcat()
+    int size_c = 0;
+    int dyld_i = 0;
+    char **newenvp;
 
-    // memset(*flag_var + strlen(ENV_VAR) + strlen(str) + 2, ';', 1); // byte before this is \0 due to strcat()
-    return flag_var;
+    if (envp != NULL)
+    {
+        for (int i = 0; envp[i] != NULL; i++)
+        {
+            if (strstr(envp[i], DYLD_VAR))
+                dyld_i = i;
+
+            size_c++;
+        }
+
+        size_c += dyld_i == 0 && CHECK_FLAG(flags, INJECT_PAYLOAD); // add 1 if dyld_stock wasn't already found and INJECT_PAYLOAD is set
+
+        newenvp = malloc((size_c + 2) * sizeof(char **)); // possible memory leak? hopefully posix_spawn deallocates these else we're screwed - it doesn't
+        memcpy(newenvp, envp, size_c * sizeof(char **));
+    }
+    else
+    {
+        size_c = 1 + 1 + CHECK_FLAG(flags, INJECT_PAYLOAD);
+        dyld_i = 0;
+
+        newenvp = malloc(size_c * sizeof(char **));
+    }
+
+    newenvp[size_c - 2] = gen_flags(flags); // store our flags at the end for whomever may need it
+    newenvp[size_c - 1] = NULL;             // set last variable to NULL
+
+    if (CHECK_FLAG(flags, INJECT_PAYLOAD))
+        newenvp[dyld_i] = gen_var(DYLD_VAR, PSPAWN_PAYLOAD); // a bit destructive but DYLD_INTERPOSING really shouldn't be done anywhere else
+
+    return newenvp;
 }
 
 int posix_custom(pid_t *pid, char *path, posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char **argv, char **envp, pspawn_t custom_func, uint32_t flags)
 {
-    // big man
-    char **newenvp;
-    if (flags & INJECT_PAYLOAD)
-    {
-        int envcount = 0;
-        int dyld_i = 0;
-
-        if (envp != NULL)
-        {
-            char **currentenv = envp;
-            int dyld_finder = 0;
-
-            for (int i = 0; *currentenv != NULL; i++)
-            {
-                if (strstr(*currentenv, "DYLD_INSERT_LIBRARIES") == NULL)
-                    envcount++;
-                else
-                    dyld_i = i; // store where this is defined
-
-                currentenv++;
-            }
-        }
-
-        newenvp = malloc((envcount + 2) * sizeof(char **)); // +2 - store DYLD_INSERT_LIBRARIES + NULL
-        int j = 0;                                          // newenvp counter
-        for (int i = 0; i < envcount; i++)
-        {
-            if (strstr(envp[i], "DYLD_INSERT_LIBRARIES"))
-                continue;
-
-            newenvp[j++] = envp[i];
-        }
-
-        char *injection = malloc(strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 2);
-        injection[0] = '\0';
-        strcat(injection, "DYLD_INSERT_LIBRARIES=");
-        strcat(injection, PSPAWN_PAYLOAD);
-
-        *(injection + strlen("DYLD_INSERT_LIBRARIES=") + strlen(PSPAWN_PAYLOAD) + 2) = ';'; // replace \0 with ;
-
-        newenvp[j] = injection;
-        newenvp[++j] = NULL;
-    }
-    else
-        newenvp = envp;
-
     int status;
 
     if (pid == NULL)
@@ -106,6 +100,7 @@ int posix_custom(pid_t *pid, char *path, posix_spawn_file_actions_t *file_action
         return status;
     }
 
+    char **newenvp = add_var(envp, flags);
     status = custom_func != NULL ? custom_func(pid, path, file_actions, attrp, argv, newenvp) : posix_spawn(pid, path, file_actions, attrp, argv, newenvp);
     if (status != 0)
     {
@@ -124,7 +119,7 @@ int posix_custom(pid_t *pid, char *path, posix_spawn_file_actions_t *file_action
     if (flags & EXEC_WAIT)
         wait(&status);
 
-    printf("%s exited with status %d\n", path, WEXITSTATUS(status));
+    printf("%s (pid: %d) exited with status %d\n", path, *pid, WEXITSTATUS(status));
     return WEXITSTATUS(status);
 }
 

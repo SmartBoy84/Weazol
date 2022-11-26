@@ -1,7 +1,7 @@
 #include "common.h"
 
 pspawn_t orig_pspawn, orig_pspawnp = (pspawn_t)NULL;
-execve_t orig_execve = (execve_t)NULL;
+execve_t orig_execve, orig_execv, orig_execvp = (execve_t)NULL;
 
 char *get_name()
 {
@@ -26,17 +26,12 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 	fprintf(fptr, "posix_spawn:- Parent: %s -> child: %s\n", get_name(), path);
 
 	uint32_t flags = 0;
-	if (envp != NULL)
-	{
-		char *bob = malloc(1000);
-		strcpy(bob, envp[0]);
-	}
-	char *bob = malloc(1000);
+
 	for (char **i = envp;; i++)
 	{
-
 		if (i == NULL || *i == NULL)		  // can't put it in for loop because it runs after the code and strstr(NULL, ...) errors
 			flags = ENTITLE | INJECT_PAYLOAD; // either end was reached or malformed envp was provided (NULL as entery, not at end)
+
 		else if (strstr(*i, ENV_VAR))
 			flags = strtol(*i + strlen(ENV_VAR), NULL, 10);
 
@@ -44,7 +39,7 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 			break; // break if flag was set at either point
 	}
 
-	fprintf(fptr, "%s%s\n", flags & ENTITLE ? "Entitling," : "", flags & INJECT_PAYLOAD ? "Injecting" : "");
+	fprintf(fptr, "%s%s\n", CHECK_FLAG(flags, ENTITLE) ? "Entitling," : "", CHECK_FLAG(flags, INJECT_PAYLOAD) ? "Injecting" : "");
 	fflush(fptr);
 	fclose(fptr);
 
@@ -78,19 +73,39 @@ int fake_posix_spawnp(pid_t *pid, char *path, posix_spawn_file_actions_t *file_a
 	return fake_posix_spawn_common(pid, path, file_actions, attrp, argv, envp, orig_pspawnp);
 }
 
-int fake_execve(char *pathname, char *argv[], char *envp[]) // handles all execv*
+// these functions replace currently running process so you will need to start remote process suspended in ctor() (kill signals, look aemonidify)
+int fake_execve_common(char *pathname, char *argv[], char *envp[], execve_t origfunc) // handles all execv*
 {
 	char *name = "/bob.txt";
 	FILE *fptr = fopen(name, "a+");
 
-	fprintf(fptr, "Execve:- Parent: %s -> child: %s\n", get_name(), pathname);
+	fprintf(fptr, "Execv*:- Parent: %s -> child: %s\n", get_name(), pathname);
 
 	fflush(fptr);
 	fclose(fptr);
 
-	return orig_execve(pathname, argv, envp);
+	run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+
+	return origfunc(pathname, argv, envp);
 }
 
+int fake_execve(char *pathname, char *argv[], char *envp[])
+{
+	envp = add_var(envp, WAS_EXEC | INJECT_PAYLOAD | ENTITLE);
+	return fake_execve_common(pathname, argv, envp, orig_execve);
+}
+
+int fake_execv(char *path, char *argv[]) // handles all execv*
+{
+	environ = add_var(environ, WAS_EXEC | INJECT_PAYLOAD | ENTITLE);
+	return fake_execve_common(path, argv, NULL, orig_execv);
+}
+
+int fake_execvp(char *file, char *argv[]) // handles all execv*
+{
+	environ = add_var(environ, WAS_EXEC | INJECT_PAYLOAD | ENTITLE);
+	return fake_execve_common(file, argv, NULL, orig_execvp);
+}
 // typedef int (*execvp_t)( char *file, char * argv[]);
 // typedef int (*execvpe_t)( char *file, char * argv[], char * envp[]);
 
