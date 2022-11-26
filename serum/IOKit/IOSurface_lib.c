@@ -3,17 +3,11 @@
  * Brandon Azad
  */
 
-#include <assert.h>
-#include <sys/sysctl.h>
-#include <pthread.h>
-#include <string.h>
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <CoreFoundation/CoreFoundation.h>
+#include "IOSurface_lib.h"
+uint32_t pagesize = 0;
+mach_port_t IOSurface_worker_uc;
+uint32_t IOSurface_worker_id;
 
-#include "IOKit/IOKitLib.h"
-#define arrayn(array) (sizeof(array) / sizeof((array)[0]))
-uint64_t pagesize = 0;
 enum
 {
     kOSSerializeDictionary = 0x01000000,
@@ -229,9 +223,7 @@ static void build_essential_entitlements(void)
 bool IOSurface_init()
 {
     if (IOSurface_initialized)
-    {
         return true;
-    }
 
     size_t oldlen = sizeof(pagesize);
     int err = sysctlbyname("hw.pagesize", &pagesize, &oldlen, NULL, 0);
@@ -245,6 +237,7 @@ bool IOSurface_init()
         printf("could not find %s", "IOSurfaceRoot");
         return false;
     }
+    printf("IOSurfaceRoot port: %d", IOSurfaceRoot);
     kern_return_t kr = IOServiceOpen(
         IOSurfaceRoot,
         mach_task_self(),
@@ -252,7 +245,7 @@ bool IOSurface_init()
         &IOSurfaceRootUserClient);
     if (kr != KERN_SUCCESS)
     {
-        printf("could not open %s", "IOSurfaceRootUserClient");
+        printf("could not open %s, error: %s", "IOSurfaceRootUserClient", mach_error_string(kr));
         return false;
     }
     kr = IOServiceOpen(IOSurfaceRoot, mach_task_self(), 0, &IOSurface_worker_uc);
@@ -292,6 +285,7 @@ bool IOSurface_init()
     IOSurface_worker_id = lock_result.surface_id;
     build_essential_entitlements();
     IOSurface_initialized = true;
+    printf("Success!");
     return true;
 }
 

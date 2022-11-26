@@ -9,10 +9,33 @@
 
 #include "include/jbd.h"
 #include "include/tools.h"
+#include "IOKit/IOSurface_lib.h"
 
 // slide(offsets.loadedTCRoot) to check if hash is in tc
+static struct kOSDict *fake_ents;
+void prepare_fake_entitlements(void)
+{
+	addr64_t surfRoot = port_name_to_kobject(IOSurface_worker_uc);
+	addr64_t surfClients = kapi_read_kptr(surfRoot + OFFSET(IOSurfaceRootUserClient, surfaceClients));
+	addr64_t surfClient = kapi_read_kptr(surfClients + sizeof(kptr_t) * IOSurface_worker_id);
+	addr64_t surface = kapi_read_kptr(surfClient + OFFSET(IOSurfaceClient, surface));
+	addr64_t values = kapi_read_kptr(surface + OFFSET(IOSurface, values));
 
-bool IOSurface_init();
+	struct kOSDict *dict = kernel_fetch_dict(values);
+	// [0] CreationProperties
+	// [1] essential-entitlements
+	for (int i = 0; i < dict->count; i++)
+	{
+		if (!strcmp(dict->names[i], "essential-entitlements"))
+		{
+			fake_ents = kernel_fetch_dict(dict->items[i].value);
+			break;
+		}
+	}
+	if (fake_ents == NULL)
+		printf("no prepared entitlements?");
+	free(dict);
+}
 
 void test_hook()
 {
@@ -28,6 +51,9 @@ void test_hook()
 int main(const int argc, char **argv, char **envp)
 {
 	IOSurface_init();
+
+	uint32_t surf_id = iosurface_create_fast();
+	printf("surface_id %u", surf_id);
 	return 0;
 
 	if (getuid() > 0 && safe_elevate(getpid()) && entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER))

@@ -24,6 +24,7 @@
 	<true/>
 	<key>com.apple.security.iokit-user-client-class</key>
 	<array>
+        <string>IOSurfaceRootUserClient</string>
 		<string>IOUserServer</string>
 		<string>RootDomainUserClient</string>
 	</array>
