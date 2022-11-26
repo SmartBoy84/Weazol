@@ -2,6 +2,7 @@
 
 pspawn_t orig_pspawn, orig_pspawnp = (pspawn_t)NULL;
 execve_t orig_execve, orig_execv, orig_execvp = (execve_t)NULL;
+dlopen_t orig_dlopen = (dlopen_t)NULL;
 
 char *get_name()
 {
@@ -15,11 +16,23 @@ char *get_name()
 int status = 0;
 int current_process = 0;
 
+void *fake_dlopen(char *filename, int flag)
+{
+	char *name = "/bob.txt";
+	FILE *fptr = fopen(name, "a+");
+
+	fprintf(fptr, "dlopen*:- Parent: %s -> child: %s\n", get_name(), filename);
+
+	fflush(fptr);
+	fclose(fptr);
+
+	trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
+
+	return orig_dlopen(filename, flag);
+}
+
 int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *argv[], char *envp[], pspawn_t origfunc)
 {
-	// if (strcmp(get_name(), xpcproxy) == 0)
-	// 	abort();
-
 	char *name = "/bob.txt";
 	FILE *fptr = fopen(name, "a+");
 
@@ -43,25 +56,10 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 	fflush(fptr);
 	fclose(fptr);
 
-	if (strcmp(path, xpcproxy) == 0)													  // journey for xpcproxy stops here - may live to regret it, remember how it execs?
-		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags); // crashes if I give it the typical entitlements TODO: figure out which ones (or if that's even the issue here)
+	if (strcmp(path, xpcproxy) != 0) // journey for xpcproxy stops here - may live to regret it, remember how it execs?
+		trust_bin(&path, 1, TC_SUB_IN);
 
-	status = posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags); // this function handles everything for us
-	if (status == 85)																	// (error for untrusted binary)
-	{
-		// trust_bin((char **)&path, 1);
-
-		printf("[PSPAWN] %s not trusted?\n", path);
-		trust_bin(&path, 1);
-		// run(TRUST_BIN, path, NULL, NULL, origfunc);
-
-		return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags); // not our fault anymore
-	}
-	else
-	{
-		printf("[PSPAWN] %s trusted\n", path);
-		return status;
-	}
+	return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags);
 }
 
 int fake_posix_spawn(pid_t *pid, char *path, posix_spawn_file_actions_t *file_actions, posix_spawnattr_t *attrp, char *argv[], char *envp[])
@@ -80,13 +78,13 @@ int fake_execve_common(char *pathname, char *argv[], char *envp[], execve_t orig
 	char *name = "/bob.txt";
 	FILE *fptr = fopen(name, "a+");
 
-	fprintf(fptr, "Execv*:- Parent: %s -> child: %s\n", get_name(), pathname);
+	fprintf(fptr, "execv*:- Parent: %s -> child: %s\n", get_name(), pathname);
 
 	fflush(fptr);
 	fclose(fptr);
 
 	// run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
-	trust_bin(&pathname, 1);
+	trust_bin(&pathname, 1, TC_SUB_IN);
 
 	return origfunc(pathname, argv, envp);
 }
@@ -108,27 +106,3 @@ int fake_execvp(char *file, char *argv[]) // handles all execv*
 	environ = add_var(environ, WAS_EXEC | INJECT_PAYLOAD | ENTITLE);
 	return fake_execve_common(file, argv, NULL, orig_execvp);
 }
-// typedef int (*execvp_t)( char *file, char * argv[]);
-// typedef int (*execvpe_t)( char *file, char * argv[], char * envp[]);
-
-// execv_t orig_execv;
-// execvp_t orig_execvp;
-// execvpe_t orig_execvpe;
-
-// // typedef int (*execle_t)( char *path,  char *arg, ..., char * envp[]);
-// // typedef int (*execl_t)( char *path,  char *arg, ...);
-// // typedef int (*execlp_t)( char *file,  char *arg, ...);
-
-// void test()
-// {
-// 	 char *name = "/bob.txt";
-// 	FILE *fptr = fopen(name, "a+");
-
-// 	fprintf(fptr, "%s: %s\n", getpid() == 1 ? "LAUNCHD" : "NOT LAUNCHD", "execv");
-// 	fflush(fptr);
-
-// 	fclose(fptr);
-// }
-// // int fake_execle( char *path,  char *arg, ..., char *  envp[]);
-// // int fake_execl( char *path,  char *arg, ...);
-// // int fake_execlp( char *file,  char *arg, ...);

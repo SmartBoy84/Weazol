@@ -5,6 +5,7 @@
 #include "headers/shenanigans.h"
 
 mach_port_t server = 0;
+int logging = 1;
 
 int init_me()
 {
@@ -38,7 +39,7 @@ int init_me()
     return 0;
 }
 
-int trust_bin(char **path, int path_n)
+int trust_bin(char **path, int path_n, int sub)
 {
     int ret = 0;
 
@@ -68,7 +69,8 @@ int trust_bin(char **path, int path_n)
             continue;
         }
 
-        int ret_count = find_cdhash(path[i], sb.st_size, &hash);
+        cdhash *c;
+        int ret_count = find_cdhash(path[i], sb.st_size, &c);
 
         if (ret_count == 0)
         {
@@ -78,7 +80,7 @@ int trust_bin(char **path, int path_n)
 
         // check if it's already in custom trustcache
         addr64_t tc_ptr = tc_start;
-
+        int sim = 0;
         while (!kread(tc_ptr, tc, sizeof(kern_tc)))
         {
             tc_ptr += sizeof(kern_tc);
@@ -89,9 +91,12 @@ int trust_bin(char **path, int path_n)
                 {
                     for (int z = 0; z < ret_count; z++)
                     {
-                        if (memcmp(hash->cdhash, c[z].cdhash, 20))
-                            goto found;
+                        sim = memcmp(hash->cdhash, c[z].cdhash, 20); // this function is so damn finicky for some reason, DON'T touch the following code AT ALL up to the end of the while loop
+                        if (sim == 0)
+                            break;
                     }
+                    if (sim == 0)
+                        goto found; // seems redundant but trust me
                 }
 
                 tc_ptr += sizeof(cdhash);
@@ -101,14 +106,14 @@ int trust_bin(char **path, int path_n)
         }
 
         cdhash_master[i].count = ret_count;
-        cdhash_master[i].hash = hash;
+        cdhash_master[i].hash = c;
 
         count++;
         size += ret_count;
+        continue; // don't free() if a hash is stored in the buffer
 
-        // we come here when it's hash is found to be already in custom trustcache
-    found:
-        continue;
+    found: // we come here when it's hash is found to be already in custom trustcache
+        free(c);
     }
 
     if (count == 0)
@@ -117,14 +122,15 @@ int trust_bin(char **path, int path_n)
         goto end;
     }
 
-    cdhash *final_hash = malloc(sizeof(cdhash) * size);
-    cdhash *c_ptr = final_hash;
+    cdhash *c = malloc(sizeof(cdhash) * size);
+    cdhash *c_ptr = c;
 
     for (int i = 0; i < count; i++)
     {
         if (cdhash_master[i].count > 0)
         {
             memcpy(c_ptr, cdhash_master[i].hash, sizeof(cdhash) * cdhash_master[i].count);
+            free(cdhash_master[i].hash);
             c_ptr += cdhash_master[i].count;
         }
     }
@@ -138,22 +144,24 @@ int trust_bin(char **path, int path_n)
     //     printf("\n");
     // }
 
-    if (size == 1)
-        ret = sub_hash((uint8_t *)final_hash, PERSIST_MEM);
-    else if (size > 1)
-        ret = add_hashs((uint8_t *)final_hash, size, PERSIST_MEM) == 0;
+    if (size == 1 && sub)
+        ret = sub_hash((uint8_t *)c, PERSIST_MEM);
+    else // no need for further size check, that's done before
+        ret = add_hashs((uint8_t *)c, size, PERSIST_MEM) == 0;
+
+    free(c);
 
     if (ret == 1)
     {
         ret = 1;
         printf("Failed to add hash!");
-        goto end;
     }
+
+    goto end;
 
 end:
     free(tc);
     free(hash);
-    free(final_hash);
 
     return ret;
 }
@@ -179,7 +187,7 @@ KDetails *init_kdetails()
 
     if (status.message.header.msgh_id == OP_SUCCESS)
         return (KDetails *)status.message.descriptor.address;
-    else
+    else if (logging)
         printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
     return 0;
@@ -222,7 +230,7 @@ int kread(uint64_t ptr, void *buff, uint64_t count)
             return 1;
         }
     }
-    else
+    else if (logging)
         printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
     return 1;
@@ -254,7 +262,7 @@ int kwrite(uint64_t ptr, void *rbuff, uint64_t count)
         return 1;
     }
 
-    if (status.message.header.msgh_id != OP_SUCCESS)
+    if (status.message.header.msgh_id != OP_SUCCESS && logging)
         printf("daemon ERROR: %s", (char *)status.message.descriptor.address);
 
     return status.message.header.msgh_id;

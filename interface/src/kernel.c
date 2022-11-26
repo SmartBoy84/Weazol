@@ -30,7 +30,8 @@ addr64_t read_pointer(addr64_t ptr_addr)
     addr64_t ptr;
     if (kread(ptr_addr, &ptr, sizeof(addr64_t)))
     {
-        printf("Failed to read pointer!");
+        if (logging)
+            printf("Failed to read pointer!");
         return 0;
     }
 
@@ -160,7 +161,7 @@ addr64_t find_proc_by_task(pid_t pid)
 }
 
 // int add_entitlement() {
-    
+
 // }
 
 int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)

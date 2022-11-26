@@ -1,13 +1,18 @@
 #include "common.h"
 
+DYLD_INTERPOSE(fake_dlopen, dlopen);
+
 DYLD_INTERPOSE(fake_posix_spawn, posix_spawn);
 DYLD_INTERPOSE(fake_posix_spawnp, posix_spawnp);
+
 DYLD_INTERPOSE(fake_execv, execv);
 DYLD_INTERPOSE(fake_execve, execve);
 DYLD_INTERPOSE(fake_execvp, execvp);
 
 __attribute__((constructor)) static void ctor(void)
 {
+	logging = 0;
+
 	const char *name = "/bob.txt";
 	FILE *fptr = fopen(name, "a+");
 
@@ -34,8 +39,11 @@ __attribute__((constructor)) static void ctor(void)
 	fflush(fptr);
 	fclose(fptr);
 
+	orig_dlopen = (dlopen_t)dlopen;
+
 	orig_pspawn = (pspawn_t)posix_spawn;
 	orig_pspawnp = (pspawn_t)posix_spawnp;
+
 	orig_execve = (execve_t)execve; // we will need to suspend child in its own constructor for this to work OR just override function entirely and call custom_posix with SET_EXEC flag
 	orig_execv = (execve_t)execv;	// yes this cast isn't correct but it works so idk
 	orig_execvp = (execve_t)execvp; // yes this cast isn't correct but it works so idk

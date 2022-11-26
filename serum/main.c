@@ -10,14 +10,12 @@
 #include "include/jbd.h"
 #include "include/tools.h"
 
-// slide(offsets.loadedTCRoot) to check if hash is in tc
-
 void test_hook()
 {
-	char *path = "/bin/date";
+	char *path = "/bin/uname";
 
 	char *launch_arg[] = {path, NULL};
-	char *flags[] = {gen_flags(INJECT_PAYLOAD), NULL};
+	char *flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
 
 	posix_spawn(NULL, path, NULL, NULL, (char **)&launch_arg, (char **)&flags);
 	sleep(1);
@@ -25,10 +23,7 @@ void test_hook()
 
 int main(const int argc, char **argv, char **envp)
 {
-	char *test = "/bin/ps";
-	trust_bin(&test, 1);
-	return 0;
-
+	logging = 0;
 	if (getuid() > 0 && safe_elevate(getpid()) && entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER))
 		return 1;
 
@@ -46,11 +41,7 @@ int main(const int argc, char **argv, char **envp)
 	for (int i = 0; i < sizeof(sign_dict) / sizeof(char *); i++)
 	{
 		temp_dict[1] = sign_dict[i];
-		if (trust_bin((char **)temp_dict, 2))
-		{
-			printf("Failed to add %s", temp_dict[i]); // payload may be signed but this ensures daemon is active (check jbd.c/init_me())
-			return 0;
-		}
+		trust_bin((char **)temp_dict, 2, TC_CREATE_NEW);
 	}
 
 	char str[24];

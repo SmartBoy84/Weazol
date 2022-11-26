@@ -14,11 +14,16 @@
 
 #define TIMEOUT 100 // ms
 
+#define TC_SUB_IN 1
+#define TC_CREATE_NEW 0
+
+extern int logging;
+
 // init mach shizzle
 int init_me();
 
 // add a binary to trustcache!
-int trust_bin(char **path, int path_n);
+int trust_bin(char **path, int path_n, int sub);
 
 // get kdetails struct
 KDetails *init_kdetails();

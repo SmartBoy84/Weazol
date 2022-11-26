@@ -463,7 +463,7 @@ compute_cdhashes(const void *file, size_t size, cdhash **h)
 	if (fh != NULL)
 	{
 		struct fat_arch *fa = (struct fat_arch *)(fh + 1);
-		*h = mach_alloc(sizeof(cdhash) * be32toh(fh->nfat_arch));
+		*h = malloc(sizeof(cdhash) * be32toh(fh->nfat_arch));
 		for (uint32_t i = 0; i < be32toh(fh->nfat_arch); i++)
 		{
 			if (compute_cdhash(file + be32toh(fa->offset), be32toh(fa->size), *h + count))
@@ -476,7 +476,7 @@ compute_cdhashes(const void *file, size_t size, cdhash **h)
 	}
 	else
 	{
-		*h = mach_alloc(sizeof(cdhash));
+		*h = malloc(sizeof(cdhash));
 		count = compute_cdhash(file, size, *h);
 	}
 
