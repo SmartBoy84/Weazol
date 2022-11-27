@@ -26,7 +26,7 @@ void *fake_dlopen(char *filename, int flag)
 	fflush(fptr);
 	fclose(fptr);
 
-	trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
+	// trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
 
 	return orig_dlopen(filename, flag);
 }
@@ -83,8 +83,8 @@ int fake_execve_common(char *pathname, char *argv[], char *envp[], execve_t orig
 	fflush(fptr);
 	fclose(fptr);
 
-	// run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
-	trust_bin(&pathname, 1, TC_SUB_IN);
+	run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+	// trust_bin(&pathname, 1, TC_SUB_IN);
 
 	return origfunc(pathname, argv, envp);
 }

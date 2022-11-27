@@ -21,6 +21,7 @@ __attribute__((constructor)) static void ctor(void)
 	char *flags_var; // ideally I should do STRLEN(ENV_VAR) + 32 + 1 to save memory but eh
 	if ((flags_var = getenv(ENV_VAR)))
 	{
+		fprintf(fptr, "Flags: %s", flags_var);
 		uint32_t flags;
 		flags = strtol(flags_var, NULL, 10);
 
@@ -28,6 +29,7 @@ __attribute__((constructor)) static void ctor(void)
 
 		if (CHECK_FLAG(flags, WAS_EXEC)) // see if we need to do things ourselves
 		{
+			fprintf(fptr, "I was exec'ed");
 			if (CHECK_FLAG(flags, ENTITLE))
 				entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER);
 		}

@@ -6,12 +6,14 @@
 #include "headers/cs_blobs.h"
 #include "machapi.h"
 
+#pragma pack(1)
 typedef struct
 {
 	uint8_t cdhash[20];
 	uint8_t hash_type;
 	uint8_t flag;
 } cdhash;
+#pragma pack(0)
 
 typedef struct
 {

@@ -49,8 +49,8 @@ int trust_bin(char **path, int path_n, int sub)
 
     KDetails *kdeets = init_kdetails();
     addr64_t tc_start = read_pointer(kdeets->tcroot);
+
     kern_tc *tc = malloc(sizeof(kern_tc));
-    cdhash *hash = malloc(sizeof(cdhash));
 
     for (int i = 0; i < path_n; i++)
     {
@@ -80,28 +80,28 @@ int trust_bin(char **path, int path_n, int sub)
 
         // check if it's already in custom trustcache
         addr64_t tc_ptr = tc_start;
-        int sim = 0;
+        size_t found_hash_size = sizeof(cdhash) * ret_count;
+
         while (!kread(tc_ptr, tc, sizeof(kern_tc)))
         {
+            if (tc->header.size < ret_count)
+                continue;
+
             tc_ptr += sizeof(kern_tc);
 
-            for (int i = 0; i < tc->header.size; i++)
-            {
-                if (!kread(tc_ptr + (i * sizeof(cdhash)), hash, sizeof(cdhash)))
-                {
-                    for (int z = 0; z < ret_count; z++)
-                    {
-                        sim = memcmp(hash->cdhash, c[z].cdhash, 20); // this function is so damn finicky for some reason, DON'T touch the following code AT ALL up to the end of the while loop
-                        if (sim == 0)
-                            break;
-                    }
-                    if (sim == 0)
-                        goto found; // seems redundant but trust me
-                }
+            size_t tc_hash_size = sizeof(cdhash) * tc->header.size;
+            cdhash *hash = malloc(tc_hash_size);
 
-                tc_ptr += sizeof(cdhash);
+            if (!kread(tc_ptr, hash, tc_hash_size))
+            {
+                if (memmem(hash, tc_hash_size, c, found_hash_size) != NULL)
+                {
+                    free(hash);
+                    goto found;
+                }
             }
 
+            free(hash);
             tc_ptr = read_pointer((addr64_t)tc->next);
         }
 
@@ -110,7 +110,7 @@ int trust_bin(char **path, int path_n, int sub)
 
         count++;
         size += ret_count;
-        continue; // don't free() if a hash is stored in the buffer
+        continue; // don't free() since the hash pointer will be stored in the buffer
 
     found: // we come here when it's hash is found to be already in custom trustcache
         free(c);
@@ -161,7 +161,7 @@ int trust_bin(char **path, int path_n, int sub)
 
 end:
     free(tc);
-    free(hash);
+    // free(hash);
 
     return ret;
 }

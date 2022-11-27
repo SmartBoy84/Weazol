@@ -110,6 +110,7 @@ int posix_custom(pid_t *pid, char *path, posix_spawn_file_actions_t *file_action
 
     if (flags & ENTITLE)
     {
+        printf("Entitling...");
         entitle(*pid, TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER); // unc0ver does this to processes, possible add CS_INSTALLER ent
         // pacify(1, *pid);                                                        // BROKEN, not necessary - necessary for tweak injection - from the payload, this will set all process's PAC keys to be the same as launchd
     }
