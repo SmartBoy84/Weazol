@@ -26,7 +26,7 @@ void *fake_dlopen(char *filename, int flag)
 	fflush(fptr);
 	fclose(fptr);
 
-	// trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
+	trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
 
 	return orig_dlopen(filename, flag);
 }

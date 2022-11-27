@@ -59,7 +59,6 @@ int main(const int argc, char **argv, char **envp)
 
 	printf("\n\nRunning test: \n");
 	test_hook();
-	return 0;
 
 	// // run("bigpsp", NULL, NULL, NULL, NULL);
 
