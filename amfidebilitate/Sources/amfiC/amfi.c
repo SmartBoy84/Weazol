@@ -86,48 +86,6 @@ success:
     mach_dealloc(error, RETURN_SIZE);
 }
 
-void get_tc_base(OOLReceiveMessage *raw_msg) // make a full fledged struct of useful offsets
-{
-    if (cubbyhole > 0)
-    {
-        send_ool(raw_msg->message.header.msgh_remote_port, &cubbyhole, sizeof(cubbyhole), PERSIST_MEM, OP_SUCCESS);
-        return;
-    }
-    else
-    {
-        char *return_m = mach_alloc(RETURN_SIZE);
-        strcpy(return_m, "cubbyhole not made!");
-        send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_FAIL);
-        mach_dealloc(return_m, RETURN_SIZE);
-        return;
-    }
-}
-
-void add_hashs(OOLReceiveMessage *raw_msg)
-{
-    char *return_m = mach_alloc(RETURN_SIZE);
-    if (raw_msg->message.descriptor.size % CDHASH == 0)
-    {
-        int count = raw_msg->message.descriptor.size / CDHASH;
-
-        if ((*((uint64_t *)return_m) = addHashs(raw_msg->message.descriptor.address, count)) != 0)
-        {
-            send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_SUCCESS);
-            goto success;
-        }
-        else
-            strcpy(return_m, "Failed to create trustcache");
-    }
-    else
-        strcpy(return_m, "Buffer not divisible by CDHASH_LENGTH (22 bytes)");
-
-    printf("Error: %s", return_m);
-    send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_FAIL);
-
-success:
-    mach_dealloc(return_m, RETURN_SIZE);
-}
-
 void create_empty(OOLReceiveMessage *raw_msg)
 {
     int *count = raw_msg->message.descriptor.address;
@@ -135,7 +93,7 @@ void create_empty(OOLReceiveMessage *raw_msg)
 
     if (*count > 0 && *count < 0xFFFF)
     {
-        if ((*((uint64_t *)return_m) = createEmpty(*count)))
+        if ((*((uint64_t *)return_m) = init_tc(*count)))
         {
             send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_SUCCESS);
             goto success;
@@ -150,22 +108,6 @@ void create_empty(OOLReceiveMessage *raw_msg)
     send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_FAIL);
 
 success:
-    mach_dealloc(return_m, RETURN_SIZE);
-}
-
-void sub_hash(OOLReceiveMessage *raw_msg)
-{
-    char *return_m = mach_alloc(RETURN_SIZE);
-
-    if (subHash(raw_msg->message.descriptor.address))
-    {
-        strcpy(return_m, "Failed to sub in has");
-        printf("ERROR: %s", return_m);
-        send_ool(raw_msg->message.header.msgh_remote_port, return_m, RETURN_SIZE, DEALLOCATE, OP_FAIL);
-    }
-    else
-        send_ool(raw_msg->message.header.msgh_remote_port, NULL, 0, DEALLOCATE, OP_SUCCESS);
-
     mach_dealloc(return_m, RETURN_SIZE);
 }
 
@@ -196,7 +138,7 @@ void amfi_handle(OOLReceiveMessage *raw_msg)
 
     char *error = mach_alloc(RETURN_SIZE);
 
-    if (raw_msg->message.descriptor.size > 0 || raw_msg->message.header.msgh_id == GET_KDETAILS || raw_msg->message.header.msgh_id == GET_TC_BASE) // sorry for hacky solution, these are the functions supporting NULL data
+    if (raw_msg->message.descriptor.size > 0 || raw_msg->message.header.msgh_id == GET_KDETAILS) // sorry for hacky solution, these are the functions supporting NULL data
     {
         if (raw_msg->message.header.msgh_remote_port)
         {
@@ -211,17 +153,8 @@ void amfi_handle(OOLReceiveMessage *raw_msg)
             case KWRITE:
                 kwrite(raw_msg);
                 goto success;
-            case GET_TC_BASE:
-                get_tc_base(raw_msg);
-                goto success;
             case CREATE_EMPTY:
                 create_empty(raw_msg);
-                goto success;
-            case SUB_HASH:
-                sub_hash(raw_msg);
-                goto success;
-            case ADD_HASH:
-                add_hashs(raw_msg);
                 goto success;
             case SIGN_POINTER:
                 sign_pointer(raw_msg);

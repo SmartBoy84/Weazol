@@ -47,4 +47,7 @@ int safe_elevate(pid_t pid);
 // rest filesystem root r/w
 int test_rw();
 
+// add a binary to trustcache!
+int trust_bin(char **path, int path_n, int sub);
+
 #endif

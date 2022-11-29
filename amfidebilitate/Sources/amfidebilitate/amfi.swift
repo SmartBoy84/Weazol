@@ -4,25 +4,27 @@ import externalCStuff
 import Foundation
 import KernelExploit
 
-func addHash(cdhashes: [[UInt8]]) -> UInt64? {
-    var tc = Data()
-    tc += [0x01, 0x00, 0x00, 0x00] // version
-    tc += [UInt8](0 ..< 16).map { _ in .random(in: UInt8.min ... UInt8.max) } // random UUID
+var cubbyhole: UInt64 = 0
 
-    withUnsafeBytes(of: UInt32(cdhashes.count).littleEndian) { tc.append(contentsOf: $0) } // cdhash count
-    for hash in cdhashes {
-        guard hash.count == 22 else {
-            print("Length of hash was \(hash.count), panic.")
-            return 0
-        }
+// func addHash(cdhashes: [[UInt8]]) -> UInt64? {
+//     var tc = Data()
+//     tc += [0x01, 0x00, 0x00, 0x00] // version
+//     tc += [UInt8](0 ..< 16).map { _ in .random(in: UInt8.min ... UInt8.max) } // random UUID
 
-        tc += hash // cdhashes
-        // tc += [0x02, 0x00] // flag, hash type --- this should be done by hand now to be safe
-    }
+//     withUnsafeBytes(of: UInt32(cdhashes.count).littleEndian) { tc.append(contentsOf: $0) } // cdhash count
+//     for hash in cdhashes {
+//         guard hash.count == 22 else {
+//             print("Length of hash was \(hash.count), panic.")
+//             return 0
+//         }
 
-    // Logger.print("Injecting \(cdhashes.count) trust caches: \(Array(tc))")
-    return pe.injectTC(data: tc)
-}
+//         tc += hash // cdhashes
+//         // tc += [0x02, 0x00] // flag, hash type --- this should be done by hand now to be safe
+//     }
+
+//     // Logger.print("Injecting \(cdhashes.count) trust caches: \(Array(tc))")
+//     return pe.injectTC(data: tc)
+// }
 
 @_cdecl("kread_s")
 func kread(_ kptr: UInt64, _ buffer: UnsafeMutableRawPointer, _ count: UInt64) -> Int {
@@ -49,10 +51,12 @@ func kwrite(_ kptr: UInt64, _ buffer: UnsafeMutableRawPointer, _ count: UInt64) 
 @_cdecl("fetch_deets")
 func fetch_deets(kdetails: UnsafeMutablePointer<KDetails>) -> Int {
     do {
+        // maybe store this statically?
         kdetails.pointee.allproc = try pe.mem.r64(virt: pe.slide(pe.offsets.allProcAddr))
         kdetails.pointee.kbase = pe.mem.kernelVirtBase
         kdetails.pointee.kslide = pe.mem.kernelSlide
         kdetails.pointee.tcroot = pe.slide(pe.mem.offsets.loadedTCRoot)
+        kdetails.pointee.cubby = cubbyhole
 
         return 0
     } catch {
@@ -61,38 +65,14 @@ func fetch_deets(kdetails: UnsafeMutablePointer<KDetails>) -> Int {
     }
 }
 
-@_cdecl("addHashs")
-func addHashs(hashs: UnsafeMutablePointer<UInt8>, count: Int) -> UInt64 {
-    var finalList: [[UInt8]] = []
-    for i in 1 ... count {
-        finalList.append(Array(UnsafeBufferPointer(start: hashs.advanced(by: (i - 1) * 22), count: 22)))
-    }
-
-    return addHash(cdhashes: finalList) ?? 0
-}
-
-@_cdecl("createEmpty")
-func createEmpty(count: Int) -> UInt64 {
-    return addHash(cdhashes: [[UInt8]](repeating: Array([[0x02, 0x00], [UInt8](repeating: 0, count: 20)].joined()), count: count)) ?? 0 // enforce specific hash type + flag, user can change it later if the need arises
-}
-
-@_cdecl("subHash")
-func subHash(hash: UnsafeMutablePointer<UInt8>) -> Int {
+@_cdecl("init_tc")
+func createEmpty(count: UInt32) -> UInt64 {
+    // return addHash(cdhashes: [[UInt8]](repeating: Array([[0x02, 0x00], [UInt8](repeating: 0, count: 20)].joined()), count: count)) ?? 0 // enforce specific hash type + flag, user can change it later if the need arises
     do {
-        var tc = Data()
-
-        tc += [0x01, 0x00, 0x00, 0x00] // version
-        tc += [UInt8](0 ..< 16).map { _ in .random(in: UInt8.min ... UInt8.max) } // random UUID
-
-        withUnsafeBytes(of: UInt32(1).littleEndian) { tc.append(contentsOf: $0) } // cdhash count
-        tc += Data(bytes: hash, count: 22)
-
-        try pe.mem.writeBytes(virt: cubbyhole, data: tc)
-        return 0
-
+        return try pe.injectEmptyTrustCache(space: count)
     } catch let e {
-        print("Failed to write hash: \(e)")
-        return 1
+        print("Error adding: \(e)")
+        return 0
     }
 }
 
@@ -126,9 +106,10 @@ func neuter() {
         return
     }
 
-    cubbyhole = createEmpty(count: 1)
-    if cubbyhole == 0 {
-        print("Failed to add placeholder trustcache")
+    do {
+        cubbyhole = try pe.injectEmptyTrustCache(space: 1)
+    } catch let e {
+        print("Failed to add placeholder trustcache: \(e)")
         return
     }
 

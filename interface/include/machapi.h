@@ -18,11 +18,8 @@
 #define GET_KDETAILS 0
 #define KREAD 1
 #define KWRITE 2
-#define GET_TC_BASE 3
-#define ADD_HASH 4
-#define CREATE_EMPTY 5
-#define SUB_HASH 6
-#define SIGN_POINTER 7
+#define CREATE_EMPTY 3
+#define SIGN_POINTER 4
 
 #define OP_SUCCESS 0
 #define OP_FAIL 1
@@ -35,10 +32,16 @@ extern mach_port_t receive_port;
 
 typedef struct
 {
+  // pointer to newest process in kernel proc_list
   uint64_t allproc;
+  // start of kernel mach-o
   uint64_t kbase;
+  // kernel aslr
   uint64_t kslide;
+  // pointer to newest cdhash in custom trustcache
   uint64_t tcroot;
+  // pointer to our pre-defined trustcache slot for one-shot bypassing amfi
+  uint64_t cubby;
 } KDetails;
 
 typedef struct

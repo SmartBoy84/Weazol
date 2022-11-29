@@ -253,17 +253,17 @@ cs_codedirectory_cdhash(CS_CodeDirectory *cd, cdhash *cdhash)
 	{
 	case CS_HASHTYPE_SHA1:
 		DEBUG_TRACE(2, "Using SHA1\n");
-		cdhash_sha1(cd, length, cdhash->cdhash);
+		cdhash_sha1(cd, length, cdhash->hash);
 		cdhash->hash_type = CS_HASHTYPE_SHA1;
 		return true;
 	case CS_HASHTYPE_SHA256:
 		DEBUG_TRACE(2, "Using SHA256\n");
-		cdhash_sha256(cd, length, cdhash->cdhash);
+		cdhash_sha256(cd, length, cdhash->hash);
 		cdhash->hash_type = CS_HASHTYPE_SHA256;
 		return true;
 	case CS_HASHTYPE_SHA384:
 		DEBUG_TRACE(2, "Using SHA384\n");
-		cdhash_sha384(cd, length, cdhash->cdhash);
+		cdhash_sha384(cd, length, cdhash->hash);
 		cdhash->hash_type = CS_HASHTYPE_SHA384;
 		return true;
 	}

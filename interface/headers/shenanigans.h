@@ -19,19 +19,4 @@ int csops(pid_t pid, unsigned int ops, uint32_t *useraddr, size_t usersize);
 extern int proc_listallpids(void *, int);
 extern int proc_pidpath(int, void *, uint32_t);
 
-// https://github.com/darlinghq/darling-newlkm/blob/master/osfmk/vm/pmap.h
-typedef struct {
-        uint32_t version;
-        char uuid[16];
-        uint32_t size;
-} trustcache_header;
-
-typedef struct // pmap_image4_trust_cache
-{
-    addr64_t next; // linked list
-    addr64_t module; // unneeded, points to ourselves
-
-    trustcache_header header;
-} kern_tc;
-
 #endif

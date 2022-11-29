@@ -1,6 +1,8 @@
 #include "include/tools.h"
 #include "include/kernel.h"
 #include "include/jbd.h"
+#include "include/cdhash.h"
+#include "headers/shenanigans.h"
 
 // for the noobs
 int run(char *path, char *arg1, char *arg2, char *arg3, pspawn_t custom_func) // mostly acts as a shim for past code
@@ -153,6 +155,141 @@ void daemonize_me()
     chdir("/");                                      // change working dir to root
     for (int x = sysconf(_SC_OPEN_MAX); x >= 0; x--) // Close all open file descriptors
         close(x);
+}
+
+int trust_bin(char **path, int path_n, int sub)
+{
+    KDetails *kdeets = init_kdetails();
+    int ret = 1; // expect failure
+
+    cdhash_list *cdhash_master = malloc(sizeof(cdhash_list) * path_n);
+    int count = 0; // number of valid cdhashes
+    int size = 0;  // each cdhash struct can contain multiple hashes
+
+    cdhash_header *temp_tc = malloc(sizeof(cdhash_header));
+    addr64_t newest_tc = read_pointer(kdeets->tcroot); // reads pointer to cdhash that is the latest at this point
+
+    for (int i = 0; i < path_n; i++)
+    {
+        struct stat sb = {0};
+        if (stat(path[i], &sb) != 0)
+        {
+            printf("Failed to open bin %s", path[i]);
+            cdhash_master[i].count = 0;
+            continue;
+        }
+
+        if (!S_ISREG(sb.st_mode))
+        {
+            printf("%s isn't a binary!", path[i]);
+            cdhash_master[i].count = 0;
+            continue;
+        }
+
+        cdhash *c;
+        int ret_count = find_cdhash(path[i], sb.st_size, &c);
+
+        if (ret_count == 0)
+        {
+            printf("cdhash for %s not found", path[i]);
+            continue;
+        }
+
+        // check if it's already in custom trustcache
+        addr64_t tc_ptr = newest_tc;
+        size_t found_hash_size = sizeof(cdhash) * ret_count;
+
+        while (!kread(tc_ptr, temp_tc, sizeof(cdhash_header)))
+        {
+            if (temp_tc->count < ret_count)
+            {
+                tc_ptr = read_pointer(temp_tc->next);
+                continue;
+            }
+
+            tc_ptr += sizeof(cdhash_header);
+
+            size_t tc_hash_size = sizeof(cdhash) * temp_tc->count;
+            cdhash *hash = malloc(tc_hash_size);
+
+            if (!kread(tc_ptr, hash, tc_hash_size))
+            {
+                if (memmem(hash, tc_hash_size, c, found_hash_size - 1) != NULL) // -1 -- for some reason the last byte fluctuates, kernel shizzle?
+                {
+                    free(hash);
+                    goto found;
+                }
+            }
+
+            free(hash);
+            tc_ptr = read_pointer(temp_tc->next);
+        }
+
+        cdhash_master[i].count = ret_count;
+        cdhash_master[i].cdhash = c;
+
+        count++;
+        size += ret_count;
+        continue; // don't free() since the hash pointer will be stored in the buffer
+
+    found: // we come here when it's hash is found to be already in custom trustcache
+        free(c);
+    }
+
+    if (size == 0)
+        goto end;
+
+    size_t entry_size = sizeof(cdhash_header) + (sizeof(cdhash) * size);
+    cdhash_entry *entry = malloc(entry_size);
+
+    cdhash *c_ptr = &(entry->cdhash);
+
+    for (int i = 0; i < count; i++)
+    {
+        if (cdhash_master[i].count > 0)
+        {
+            memcpy(c_ptr, cdhash_master[i].cdhash, sizeof(cdhash) * cdhash_master[i].count);
+            free(cdhash_master[i].cdhash);
+            c_ptr += cdhash_master[i].count;
+        }
+    }
+
+    // for (int x = 0; x < size; x++)
+    // {
+    //     for (int i = 0; i < sizeof(cdhash); i++)
+    //     {
+    //         printf("%d ", *(((uint8_t *)&entry->hash) + (x * sizeof(cdhash)) + i));
+    //     }
+    //     printf("\n");
+    // }
+
+    uint64_t tc_addr = 0;
+    if (size == 1 && sub == TC_SUB_IN)
+        tc_addr = kdeets->cubby;
+    else
+        tc_addr = create_empty(size);
+
+    if (!tc_addr)
+        printf("Failed to create/find trustcache in kernel");
+    else
+    {
+        if (kread(tc_addr, entry, sizeof(cdhash_header)) || // fugu does all the header shenanigans for us
+            kwrite(tc_addr, entry, entry_size))
+            printf("Failed to read/write hash");
+        else
+            ret = 0; // Success!
+    }
+
+    free(entry); // it's placement here isn't a mistake, look carefully
+
+    if (ret == 1)
+        printf("Failed to add hash!");
+
+end:
+    free(temp_tc);
+    free(cdhash_master);
+
+    return ret;
 }
 
 int safe_elevate(pid_t pid)
