@@ -184,7 +184,7 @@ int entitle(pid_t pid, uint32_t target_task_flags, uint32_t target_cs_flags)
     uint32_t csflags = rk32(csflags_addr);
 
     csflags |= target_cs_flags;
-    csflags &= ~(CS_RESTRICT | CS_HARD | CS_KILL); // remove impediments
+    csflags &= ~(CS_HARD | CS_RESTRICT | CS_KILL); // remove impediments, don't remove CS_HARD?
     wk32(csflags_addr, csflags);
 
     return 0;

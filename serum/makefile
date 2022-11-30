@@ -5,7 +5,7 @@ APP_FLAG:=
 
 DYLIB_FOLDER:=payload
 
-DYLD_DYLIB:=dyld_vamos.dylib
+DYLD_DYLIB:=interpose_vamos.dylib
 DYLD_DYLIB_FOLDER:=payload/dyld_payload
 DYLD_DYLIB_FILE:=${DYLIB_FOLDER}/*.c ${DYLD_DYLIB_FOLDER}/*.c src/*.c -I${DYLIB_FOLDER} -I${DYLD_DYLIB_FOLDER} -Iinclude -Linclude -I. -L. -Iheaders -Lheaders
 DYLD_DYLIB_FLAG:=-arch arm64e -dynamiclib -framework Foundation -DCOMMONCRYPTO

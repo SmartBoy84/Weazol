@@ -7,8 +7,10 @@
 #include <stdlib.h>
 #include "dlfcn.h"
 
+// my libraries
 #include "include/jbd.h"
 #include "include/tools.h"
+#include "include/macho.h"
 
 void test_hook()
 {
@@ -23,6 +25,22 @@ void test_hook()
 
 int main(const int argc, char **argv, char **envp)
 {
+
+	// struct load_command **lcmds = load_lcmds(0, "/binpack/pspboi", LC_LOAD_DYLIB);
+	// for (int i = 0; lcmds[i] != NULL; i++)
+	// {
+	// 	printf("%d", lcmds[i]->cmdsize);
+	// }
+	char **dylibs = get_dylibs(0, "/binpack/pspboi");
+	if (dylibs)
+	{
+		printf("Name: %s", dylibs[0]);
+	}
+	else
+		printf("Failed to find ANY dylibs?");
+
+	return 0;
+
 	logging = 0;
 
 	if (getuid() > 0 && safe_elevate(getpid()) && entitle(getpid(), TF_PLATFORM, CS_PLATFORM_BINARY | CS_GET_TASK_ALLOW | CS_DEBUGGED | CS_INSTALLER))
@@ -37,14 +55,8 @@ int main(const int argc, char **argv, char **envp)
 		return 0;
 	}
 
-	char *sign_dict[] = {INJECT_BIN, FISHOOK_PSPAWN_PAYLOAD, PSPAWN_PAYLOAD};
+	char *sign_dict[] = {INJECT_BIN, FISHOOK_PSPAWN_PAYLOAD, PSPAWN_PAYLOAD, NULL};
 	trust_bin((char **)sign_dict, 3, TC_CREATE_NEW);
-	// char *temp_dict[] = {"/bin/ps", NULL}; // adding with /bin/ps ensures it a separate place in trustcache (I'm lazy, this is all very much broken)
-	// for (int i = 0; i < sizeof(sign_dict) / sizeof(char *); i++)
-	// {
-	// 	temp_dict[1] = sign_dict[i];
-	// 	trust_bin((char **)temp_dict, 2, TC_CREATE_NEW);
-	// }
 
 	char str[24];
 	sprintf(str, "%d", getpid());
@@ -59,7 +71,7 @@ int main(const int argc, char **argv, char **envp)
 
 	printf("\n\nRunning test: \n");
 	test_hook();
-
+	// return 0;
 	// // run("bigpsp", NULL, NULL, NULL, NULL);
 
 	// printf("Dropbear at: %d", find_pid("dropbearmulti"));
@@ -83,9 +95,8 @@ int main(const int argc, char **argv, char **envp)
 	dup2(fileno(fptr), STDERR_FILENO);
 
 	char *launch_arg[] = {"/binpack/usr/sbin/dropbear", "-E", "-F", "-p", "43", "-S", "/binpack/bin/sh", "-H", "/binpack/usr/sbin:/binpack/usr/bin:/binpack/sbin:/binpack/bin:/usr/sbin:/usr/bin:/sbin:/bin", "-r", "/.Fugu14Untether/dropbear_rsa_host_key", NULL};
-	// char *launch_flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
-
 	char *flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
+
 	posix_spawn(NULL, "/binpack/usr/sbin/dropbear", NULL, NULL, (char **)&launch_arg, (char **)&flags);
 
 	fprintf(stderr, "We shouldn't be here...\n");

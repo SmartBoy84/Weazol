@@ -40,7 +40,10 @@ char **add_var(char **envp, uint32_t flags)
     // if envp == NULL: [DYLD_INSERT?, CUSTOM_POSIX_FLAGS, NULL]
 
     int size_c = 0;
+
     int dyld_i = 0;
+    int env_i = 0;
+
     char **newenvp;
 
     if (envp != NULL)
@@ -49,13 +52,16 @@ char **add_var(char **envp, uint32_t flags)
         {
             if (strstr(envp[i], DYLD_VAR))
                 dyld_i = i;
+            else if (strstr(envp[i], ENV_VAR))
+                env_i = i;
 
             size_c++;
         }
 
         size_c += dyld_i == 0 && CHECK_FLAG(flags, INJECT_PAYLOAD); // add 1 if dyld_stock wasn't already found and INJECT_PAYLOAD is set
+        size_c += env_i == 0;
 
-        newenvp = malloc((size_c + 2) * sizeof(char **)); // possible memory leak? hopefully posix_spawn deallocates these else we're screwed - it doesn't
+        newenvp = malloc((size_c + 1) * sizeof(char **)); // possible memory leak? hopefully posix_spawn deallocates these else we're screwed - it doesn't
         memcpy(newenvp, envp, size_c * sizeof(char **));
     }
     else
@@ -66,11 +72,11 @@ char **add_var(char **envp, uint32_t flags)
         newenvp = malloc(size_c * sizeof(char **));
     }
 
-    newenvp[size_c - 2] = gen_flags(flags); // store our flags at the end for whomever may need it
-    newenvp[size_c - 1] = NULL;             // set last variable to NULL
+    newenvp[size_c - 2] = env_i ? envp[env_i] : gen_flags(flags); // store our flags at the end for whomever may need it
+    newenvp[size_c - 1] = NULL;                                   // set last variable to NULL
 
     if (CHECK_FLAG(flags, INJECT_PAYLOAD))
-        newenvp[dyld_i] = gen_var(DYLD_VAR, PSPAWN_PAYLOAD); // a bit destructive but DYLD_INTERPOSING really shouldn't be done anywhere else
+        newenvp[dyld_i] = gen_var(DYLD_VAR, PSPAWN_PAYLOAD); // a bit destructive but DYLD_INTERPOSING really shouldn't be done anywhere else - for now
 
     return newenvp;
 }
@@ -214,7 +220,7 @@ int trust_bin(char **path, int path_n, int sub)
 
             if (!kread(tc_ptr, hash, tc_hash_size))
             {
-                if (memmem(hash, tc_hash_size, c, found_hash_size - 1) != NULL) // -1 -- for some reason the last byte fluctuates, kernel shizzle?
+                if (memmem(hash, tc_hash_size, c, found_hash_size) != NULL) // -1 -- for some reason the last byte fluctuates, kernel shizzle?
                 {
                     free(hash);
                     goto found;
@@ -253,7 +259,7 @@ int trust_bin(char **path, int path_n, int sub)
             c_ptr += cdhash_master[i].count;
         }
     }
-
+    printf("Size %d", size);
     // for (int x = 0; x < size; x++)
     // {
     //     for (int i = 0; i < sizeof(cdhash); i++)

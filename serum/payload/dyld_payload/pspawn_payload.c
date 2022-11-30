@@ -25,7 +25,7 @@ __attribute__((constructor)) static void ctor(void)
 		uint32_t flags;
 		flags = strtol(flags_var, NULL, 10);
 
-		// fprintf(fptr, "flags_var: %s, %s%s%s\n", flags_var, CHECK_FLAG(flags, WAS_EXEC) ? "wasexec, " : "", CHECK_FLAG(flags, ENTITLE) ? "[WAS_EXEC] Entitling, " : "", CHECK_FLAG(flags, INJECT_PAYLOAD) ? "Injecting" : "");
+		fprintf(fptr, "flags_var: %s, %s%s%s\n", flags_var, CHECK_FLAG(flags, WAS_EXEC) ? "wasexec, " : "", CHECK_FLAG(flags, ENTITLE) ? "[WAS_EXEC] Entitling, " : "", CHECK_FLAG(flags, INJECT_PAYLOAD) ? "Injecting" : "");
 
 		if (CHECK_FLAG(flags, WAS_EXEC)) // see if we need to do things ourselves
 		{

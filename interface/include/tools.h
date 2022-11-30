@@ -10,7 +10,7 @@
 // integral file locations
 #define TRUST_BIN "/binpack/trust"
 #define INJECT_BIN "/binpack/opainject"
-#define PSPAWN_PAYLOAD "/binpack/dyld_vamos.dylib"
+#define PSPAWN_PAYLOAD "/binpack/interpose_vamos.dylib"
 #define FISHOOK_PSPAWN_PAYLOAD "/binpack/fishook_vamos.dylib"
 
 #define CHECK_FLAG(a, b) (((a & b) > 0) ? 1 : 0)

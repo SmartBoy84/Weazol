@@ -10,6 +10,7 @@
 // hooks
 #include <spawn.h>
 #include "dlfcn.h"
+#include "sys/stat.h"
 
 // my API
 #include "include/machapi.h"
@@ -31,6 +32,7 @@ typedef int (*execve_t)(char *pathname, char *argv[], char *envp[]);
 typedef void *(*dlopen_t)(char *filename, int flag);
 
 extern dlopen_t orig_dlopen;
+
 extern pspawn_t orig_pspawn, orig_pspawnp;
 
 // the reason I can do this is because the arguments "overlap" rather than "override"

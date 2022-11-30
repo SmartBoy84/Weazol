@@ -10,12 +10,10 @@ char *get_name()
 	return proc_pidpath(getpid(), pathbuf, PROC_PIDPATHINFO_MAXSIZE) > 0 ? pathbuf : "Failed";
 }
 
-// void *fake_dlopen( char *filename, int flags, dlopen_t origfunc)
-// there's an entitlement for this, check electra
-
 int status = 0;
 int current_process = 0;
 
+// there's an entitlement for this, check electra
 void *fake_dlopen(char *filename, int flag)
 {
 	char *name = "/bob.txt";
@@ -26,7 +24,7 @@ void *fake_dlopen(char *filename, int flag)
 	fflush(fptr);
 	fclose(fptr);
 
-	trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
+	// trust_bin(&filename, 1, TC_CREATE_NEW); // add dylib to trustcache - create a separate trustcache for it
 
 	return orig_dlopen(filename, flag);
 }

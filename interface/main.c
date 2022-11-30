@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include "include/tools.h"
 #include "include/kernel.h"
+#include "include/macho.h"
 
 int main(const int argc, char **argv)
 {
-
     if (argc < 2)
     {
         printf("Provide path");
@@ -15,7 +15,6 @@ int main(const int argc, char **argv)
         printf("Failed");
     else
         printf("Success!");
-
 
     KDetails *kdeets;
 
