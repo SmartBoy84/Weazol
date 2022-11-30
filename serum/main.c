@@ -14,7 +14,7 @@
 
 void test_hook()
 {
-	char *path = "/bin/uname";
+	char *path = "/usr/bin/clear";
 
 	char *launch_arg[] = {path, NULL};
 	char *flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
@@ -25,7 +25,6 @@ void test_hook()
 
 int main(const int argc, char **argv, char **envp)
 {
-
 	// struct load_command **lcmds = load_lcmds(0, "/binpack/pspboi", LC_LOAD_DYLIB);
 	// for (int i = 0; lcmds[i] != NULL; i++)
 	// {
@@ -38,8 +37,6 @@ int main(const int argc, char **argv, char **envp)
 	}
 	else
 		printf("Failed to find ANY dylibs?");
-
-	return 0;
 
 	logging = 0;
 
@@ -71,6 +68,7 @@ int main(const int argc, char **argv, char **envp)
 
 	printf("\n\nRunning test: \n");
 	test_hook();
+
 	// return 0;
 	// // run("bigpsp", NULL, NULL, NULL, NULL);
 

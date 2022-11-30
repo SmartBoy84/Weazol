@@ -13,6 +13,24 @@ char *get_name()
 int status = 0;
 int current_process = 0;
 
+void trust_libraries(char *path, FILE *fptr)
+{
+	char **libraries = get_dylibs(0, path);
+	if (libraries)
+	{
+		for (int i = 0; libraries[i] != NULL; i++)
+		{
+			// trust_bin(&libraries[i], 1, TC_CREATE_NEW);
+			run(TRUST_BIN, libraries[i], NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+
+			if (fptr)
+				fprintf(fptr, "Posix*:- library: %s\n", libraries[i]);
+			free(libraries[i]);
+		}
+	}
+	free(libraries);
+}
+
 // there's an entitlement for this, check electra
 void *fake_dlopen(char *filename, int flag)
 {
@@ -35,6 +53,7 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 	FILE *fptr = fopen(name, "a+");
 
 	fprintf(fptr, "posix_spawn:- Parent: %s -> child: %s\n", get_name(), path);
+	trust_libraries(path, fptr);
 
 	uint32_t flags = 0;
 
@@ -54,8 +73,9 @@ int fake_posix_spawn_common(pid_t *pid, char *path, posix_spawn_file_actions_t *
 	fflush(fptr);
 	fclose(fptr);
 
-	if (strcmp(path, xpcproxy) != 0) // journey for xpcproxy stops here - may live to regret it, remember how it execs?
-		trust_bin(&path, 1, TC_SUB_IN);
+	if (strcmp(path, xpcproxy) != 0)				   // journey for xpcproxy stops here - may live to regret it, remember how it execs?
+		run(TRUST_BIN, path, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+	// trust_bin(&path, 1, TC_SUB_IN);
 
 	return posix_custom(pid, path, file_actions, attrp, argv, envp, origfunc, flags);
 }
@@ -78,12 +98,12 @@ int fake_execve_common(char *pathname, char *argv[], char *envp[], execve_t orig
 
 	fprintf(fptr, "execv*:- Parent: %s -> child: %s\n", get_name(), pathname);
 
-	fflush(fptr);
-	fclose(fptr);
-
 	run(TRUST_BIN, pathname, NULL, NULL, orig_pspawn); // PATH traversal not supportet yet
+	trust_libraries(pathname, fptr);
 	// trust_bin(&pathname, 1, TC_SUB_IN);
 
+	fflush(fptr);
+	fclose(fptr);
 	return origfunc(pathname, argv, envp);
 }
 

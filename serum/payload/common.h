@@ -17,6 +17,7 @@
 #include "include/tools.h"
 #include "include/kernel.h"
 #include "include/jbd.h"
+#include "include/macho.h"
 
 #define xpcproxy "/usr/libexec/xpcproxy"
 

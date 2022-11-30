@@ -8,7 +8,7 @@ int macho_read(FILE *fptr, pid_t pid, uint64_t address, void *buffer, size_t len
 {
     int ret = 1;
     if (pid)
-        ;
+        printf("Still under construction!");
     else if (fptr)
     {
         fseek(fptr, address, SEEK_SET);
@@ -95,8 +95,6 @@ struct load_command **load_lcmds(pid_t pid, char *path, int mode)
             {
                 if (lc_test->cmd == mode)
                 {
-                    printf("Found of size %d", lc_test->cmdsize);
-
                     search_lcmd = realloc(search_lcmd, size + 1);
                     search_lcmd[size] = malloc(lc_test->cmdsize);
 
@@ -121,8 +119,8 @@ struct load_command **load_lcmds(pid_t pid, char *path, int mode)
         {
             search_lcmd = realloc(search_lcmd, size + 1);
             search_lcmd[size] = NULL; // like a usual array of strings
-            
-            ret = 0;                  // success!
+
+            ret = 0; // success!
         }
     }
 
@@ -161,8 +159,7 @@ char **get_dylibs(pid_t pid, char *path)
             struct dylib_command *dylib_seg = (struct dylib_command *)search_lcmds[i];
 
             if (dylib_seg->cmdsize > sizeof(struct dylib_command))
-            {                                                                             // strings in load_commands are found immediately after struct so it's length must be greater if string is present
-                printf("String: %s", (char *)dylib_seg + (dylib_seg->dylib.name.offset)); // .offset = sizeof(struct dylib_command) but this looks cooler
+            { // strings in load_commands are found immediately after struct so it's length must be greater if string is present
                 size++;
 
                 dylibs = realloc(dylibs, size * sizeof(char *));
