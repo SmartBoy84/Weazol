@@ -220,7 +220,7 @@ int trust_bin(char **path, int path_n, int sub)
 
             if (!kread(tc_ptr, hash, tc_hash_size))
             {
-                if (memmem(hash, tc_hash_size, c, found_hash_size) != NULL) // -1 -- for some reason the last byte fluctuates, kernel shizzle?
+                if (memmem(hash, tc_hash_size, c, found_hash_size - 1) != NULL) // -1 -- for some reason the last byte fluctuates, kernel shizzle?
                 {
                     free(hash);
                     goto found;
@@ -259,7 +259,7 @@ int trust_bin(char **path, int path_n, int sub)
             c_ptr += cdhash_master[i].count;
         }
     }
-    printf("Size %d", size);
+
     // for (int x = 0; x < size; x++)
     // {
     //     for (int i = 0; i < sizeof(cdhash); i++)
@@ -279,11 +279,21 @@ int trust_bin(char **path, int path_n, int sub)
         printf("Failed to create/find trustcache in kernel");
     else
     {
-        if (kread(tc_addr, entry, sizeof(cdhash_header)) || // fugu does all the header shenanigans for us
-            kwrite(tc_addr, entry, entry_size))
-            printf("Failed to read/write hash");
+        if (kread(tc_addr, entry, sizeof(cdhash_header))) // fugu + kernel handles the linked list shizzle for us
+            printf("Failed to read empty hash");
         else
-            ret = 0; // Success!
+        {
+            // create a random uuid
+            srand((unsigned int)time(NULL) + getpid() + entry->cdhash.hash[getpid() % 20]); // super random seed lmao
+            for (int i = 0; i < sizeof(entry->header.uuid); i++)
+                entry->header.uuid[i] = rand();
+
+            if (kwrite(tc_addr, entry, entry_size))
+                printf("Failed to read/write hash");
+
+            else
+                ret = 0; // Success!
+        }
     }
 
     free(entry); // it's placement here isn't a mistake, look carefully

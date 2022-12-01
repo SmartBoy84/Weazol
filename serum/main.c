@@ -12,31 +12,27 @@
 #include "include/tools.h"
 #include "include/macho.h"
 
+#define test_path "/usr/bin/ldid"
+
 void test_hook()
 {
-	char *path = "/usr/bin/clear";
-
-	char *launch_arg[] = {path, NULL};
+	char *launch_arg[] = {test_path, NULL};
 	char *flags[] = {gen_flags(INJECT_PAYLOAD | ENTITLE), NULL};
 
-	posix_spawn(NULL, path, NULL, NULL, (char **)&launch_arg, (char **)&flags);
+	posix_spawn(NULL, test_path, NULL, NULL, (char **)&launch_arg, (char **)&flags);
 	sleep(1);
 }
 
 int main(const int argc, char **argv, char **envp)
 {
-	// struct load_command **lcmds = load_lcmds(0, "/binpack/pspboi", LC_LOAD_DYLIB);
-	// for (int i = 0; lcmds[i] != NULL; i++)
-	// {
-	// 	printf("%d", lcmds[i]->cmdsize);
-	// }
-	char **dylibs = get_dylibs(0, "/binpack/pspboi");
+	char **dylibs = get_dylibs(0, test_path);
 	if (dylibs)
-	{
-		printf("Name: %s", dylibs[0]);
-	}
+		for (int i = 0; dylibs[i] != NULL; i++)
+			printf("Name: %s\n", dylibs[i]);
 	else
 		printf("Failed to find ANY dylibs?");
+
+	return 0;
 
 	logging = 0;
 
@@ -53,7 +49,8 @@ int main(const int argc, char **argv, char **envp)
 	}
 
 	char *sign_dict[] = {INJECT_BIN, FISHOOK_PSPAWN_PAYLOAD, PSPAWN_PAYLOAD, NULL};
-	trust_bin((char **)sign_dict, 3, TC_CREATE_NEW);
+	for (int i = 0; i < 3; i++) // MAKE SURE TO CHANGE i!!!
+		trust_bin((char **)&sign_dict[i], 1, TC_CREATE_NEW);
 
 	char str[24];
 	sprintf(str, "%d", getpid());
@@ -69,7 +66,7 @@ int main(const int argc, char **argv, char **envp)
 	printf("\n\nRunning test: \n");
 	test_hook();
 
-	// return 0;
+	return 0;
 	// // run("bigpsp", NULL, NULL, NULL, NULL);
 
 	// printf("Dropbear at: %d", find_pid("dropbearmulti"));

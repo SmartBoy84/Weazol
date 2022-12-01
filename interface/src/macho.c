@@ -151,45 +151,58 @@ char **get_dylibs(pid_t pid, char *path)
     int ret = 1;
     FILE *fptr = NULL;
 
-    struct load_command **search_lcmds = load_lcmds(pid, path, LC_LOAD_DYLIB);
-    if (search_lcmds)
+    // types from https://opensource.apple.com/source/xnu/xnu-4570.41.2/EXTERNAL_HEADERS/mach-o/loader.h.auto.html
+    struct load_command **search_lcmds_list[] = {
+        load_lcmds(pid, path, LC_LOAD_DYLIB),
+        load_lcmds(pid, path, LC_REEXPORT_DYLIB),
+        load_lcmds(pid, path, LC_LOAD_WEAK_DYLIB),
+        load_lcmds(pid, path, LC_ID_DYLIB),
+        NULL};
+
+    struct load_command **search_lcmds;
+    for (int x = 0; search_lcmds_list[x] != NULL; x++)
     {
-        for (int i = 0; search_lcmds[i] != NULL; i++)
+        search_lcmds = search_lcmds_list[x];
+
+        if (search_lcmds)
         {
-            struct dylib_command *dylib_seg = (struct dylib_command *)search_lcmds[i];
+            for (int i = 0; search_lcmds[i] != NULL; i++)
+            {
+                struct dylib_command *dylib_seg = (struct dylib_command *)search_lcmds[i];
 
-            if (dylib_seg->cmdsize > sizeof(struct dylib_command))
-            { // strings in load_commands are found immediately after struct so it's length must be greater if string is present
-                size++;
+                if (dylib_seg->cmdsize > sizeof(struct dylib_command))
+                { // strings in load_commands are found immediately after struct so it's length must be greater if string is present
+                    size++;
 
-                dylibs = realloc(dylibs, size * sizeof(char *));
-                dylibs[size - 1] = malloc(dylib_seg->cmdsize - dylib_seg->dylib.name.offset); // once again, constants can be used here but this looks cooler
+                    dylibs = realloc(dylibs, size * sizeof(char *));
+                    dylibs[size - 1] = malloc(dylib_seg->cmdsize - dylib_seg->dylib.name.offset); // once again, constants can be used here but this looks cooler
 
-                strcpy(dylibs[size - 1], (char *)dylib_seg + dylib_seg->dylib.name.offset);
+                    strcpy(dylibs[size - 1], (char *)dylib_seg + dylib_seg->dylib.name.offset);
+                }
+                else
+                    printf("[WARNING] malformed dylib load_command");
             }
-            else
-                printf("[WARNING] malformed dylib load_command");
-        }
 
-        if (size > 0)
-        {
-            ret = 0;
-            size++;
-            dylibs = realloc(dylibs, size * sizeof(char *));
-            dylibs[size - 1] = NULL; // as usual with string arrays, cap off with NULL pointer
+            if (size > 0)
+            {
+                ret = 0;
+                size++;
+                dylibs = realloc(dylibs, size * sizeof(char *));
+                dylibs[size - 1] = NULL; // as usual with string arrays, cap off with NULL pointer
+            }
         }
     }
 
 done:
-    free(search_lcmds);
+    // free(search_lcmds);
 
     if (ret)
     {
         if (dylibs)
         {
-            for (struct load_command *i = search_lcmds[0]; i != NULL; i++)
-                free(i);
-            free(search_lcmds);
+            // for (struct load_command *i = search_lcmds[0]; i != NULL; i++)
+            //     free(i);
+            // free(search_lcmds);
 
             for (char *i = dylibs[0]; i != NULL; i++)
                 free(i);

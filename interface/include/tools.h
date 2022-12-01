@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <spawn.h>
 #include <signal.h>
+#include <time.h>
 
 // integral file locations
 #define TRUST_BIN "/binpack/trust"
